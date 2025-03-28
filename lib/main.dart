@@ -1,34 +1,42 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
 
 void main() {
-  runApp(MyApp());
+  runApp(SalesApp());
 }
 
-class MyApp extends StatelessWidget {
+class SalesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: LoginScreen(),
+      title: 'Força de Venda',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: LoginPage(),
     );
   }
 }
 
-class LoginScreen extends StatefulWidget {
+class LoginPage extends StatefulWidget {
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  _LoginPageState createState() => _LoginPageState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _userController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
+  
   void _login() {
-    if (_formKey.currentState!.validate()) {
+    String username = _userController.text;
+    String password = _passwordController.text;
+    if (username == 'admin' && password == 'admin') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Usuário ou senha inválidos!')),
       );
     }
   }
@@ -39,101 +47,95 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(title: Text('Login')),
       body: Padding(
         padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(labelText: 'Email'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira seu email';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(labelText: 'Senha'),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira sua senha';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _login,
-                child: Text('Entrar'),
-              ),
-            ],
-          ),
+        child: Column(
+          children: [
+            TextField(controller: _userController, decoration: InputDecoration(labelText: 'Usuário')),
+            TextField(controller: _passwordController, decoration: InputDecoration(labelText: 'Senha'), obscureText: true),
+            SizedBox(height: 20),
+            ElevatedButton(onPressed: _login, child: Text('Entrar')),
+          ],
         ),
       ),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
-  final List<String> products = ["Produto 1", "Produto 2", "Produto 3", "Produto 4"];
-  final List<String> cart = [];
-
+class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Loja Online'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.shopping_cart),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => CartScreen(cart: cart)),
-              );
-            },
+      appBar: AppBar(title: Text('Home')),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => UserRegistrationPage())),
+            child: Text('Cadastro de Usuário'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ClientRegistrationPage())),
+            child: Text('Cadastro de Cliente'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProductRegistrationPage())),
+            child: Text('Cadastro de Produto'),
           ),
         ],
-      ),
-      body: ListView.builder(
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(products[index]),
-            trailing: ElevatedButton(
-              onPressed: () {
-                cart.add(products[index]);
-              },
-              child: Text('Adicionar ao Carrinho'),
-            ),
-          );
-        },
       ),
     );
   }
 }
 
-class CartScreen extends StatelessWidget {
-  final List<String> cart;
-
-  CartScreen({required this.cart});
-
+class UserRegistrationPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Carrinho')),
-      body: ListView.builder(
-        itemCount: cart.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(cart[index]),
-          );
-        },
-      ),
+      appBar: AppBar(title: Text('Cadastro de Usuário')),
+      body: Center(child: Text('Tela de Cadastro de Usuário')),
     );
+  }
+}
+
+class ClientRegistrationPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Cadastro de Cliente')),
+      body: Center(child: Text('Tela de Cadastro de Cliente')),
+    );
+  }
+}
+
+class ProductRegistrationPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Cadastro de Produto')),
+      body: Center(child: Text('Tela de Cadastro de Produto')),
+    );
+  }
+}
+
+// Classe para manipulação de arquivos JSON
+class FileHelper {
+  static Future<File> _getFile(String fileName) async {
+    final directory = Directory.current;
+    return File('${directory.path}/$fileName.json');
+  }
+
+  static Future<List<dynamic>> readData(String fileName) async {
+    try {
+      final file = await _getFile(fileName);
+      if (!await file.exists()) return [];
+      String content = await file.readAsString();
+      return json.decode(content);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<void> writeData(String fileName, List<dynamic> data) async {
+    final file = await _getFile(fileName);
+    await file.writeAsString(json.encode(data));
   }
 }
