@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ProductRegistrationPage extends StatelessWidget {
+  const ProductRegistrationPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
