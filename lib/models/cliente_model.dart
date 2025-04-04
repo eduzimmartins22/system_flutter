@@ -1,8 +1,8 @@
 class Cliente {
-  final int id;
+  final int? id; // Agora é opcional
   final String nome;
-  final String tipo; 
-  final String? cpf; 
+  final String tipo;
+  final String? cpf;
   final String? cnpj;
   final String email;
   final int numero;
@@ -13,7 +13,7 @@ class Cliente {
   final String uf;
 
   Cliente({
-    required this.id,
+    this.id, // Não é mais required
     required this.nome,
     required this.tipo,
     this.cpf,
@@ -26,7 +26,7 @@ class Cliente {
     required this.cidade,
     required this.uf,
   }) {
-    // Validações
+    // Validações existentes mantidas
     if (tipo != 'F' && tipo != 'J') {
       throw ArgumentError('Tipo deve ser "F" (Física) ou "J" (Jurídica)');
     }
@@ -39,7 +39,6 @@ class Cliente {
       throw ArgumentError('CNPJ é obrigatório para pessoa jurídica');
     }
     
-    // Validação básica de CPF/CNPJ (pode ser expandida)
     if (cpf != null && cpf!.length != 11) {
       throw ArgumentError('CPF deve ter 11 dígitos');
     }
@@ -47,6 +46,26 @@ class Cliente {
     if (cnpj != null && cnpj!.length != 14) {
       throw ArgumentError('CNPJ deve ter 14 dígitos');
     }
+  }
+
+ 
+  Cliente salvar({int? idFornecido}) {
+    final novoId = idFornecido ?? this.id ?? DateTime.now().millisecondsSinceEpoch;
+    
+    return Cliente(
+      id: novoId,
+      nome: nome,
+      tipo: tipo,
+      cpf: cpf,
+      cnpj: cnpj,
+      email: email,
+      numero: numero,
+      cep: cep,
+      endereco: endereco,
+      bairro: bairro,
+      cidade: cidade,
+      uf: uf,
+    );
   }
 
   Cliente copyWith({
@@ -76,7 +95,7 @@ class Cliente {
       bairro: bairro ?? this.bairro,
       cidade: cidade ?? this.cidade,
       uf: uf ?? this.uf,
-    );
+    ).salvar(); 
   }
 
   Map<String, dynamic> toJson() {
@@ -98,7 +117,7 @@ class Cliente {
 
   factory Cliente.fromJson(Map<String, dynamic> json) {
     return Cliente(
-      id: json['id'] as int,
+      id: json['id'] as int?,
       nome: json['nome'] as String,
       tipo: json['tipo'] as String,
       cpf: json['cpf'] as String?,
@@ -110,7 +129,7 @@ class Cliente {
       bairro: json['bairro'] as String,
       cidade: json['cidade'] as String,
       uf: json['UF'] as String,
-    );
+    ).salvar();
   }
 
   @override
