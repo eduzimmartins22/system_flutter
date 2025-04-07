@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'usuario.dart';
 import 'cliente.dart';
-import 'produto.dart';
+import 'pages/produto/cadastro_produto.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -22,7 +22,7 @@ class HomePage extends StatelessWidget {
             child: Text('Cadastro de Cliente'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProductRegistrationPage())),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => CadastroProduto())),
             child: Text('Cadastro de Produto'),
           ),
         ],
