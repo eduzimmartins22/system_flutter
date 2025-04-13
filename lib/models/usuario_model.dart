@@ -24,7 +24,7 @@ class Usuario {
 
   // Método para salvar que gera um ID se necessário
   Usuario salvar({int? idFornecido}) {
-    final novoId = idFornecido ?? this.id ?? DateTime.now().millisecondsSinceEpoch;
+    final novoId = idFornecido ?? id ?? DateTime.now().millisecondsSinceEpoch;
     
     return Usuario(
       id: novoId,

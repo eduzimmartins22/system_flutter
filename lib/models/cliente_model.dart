@@ -50,7 +50,7 @@ class Cliente {
 
  
   Cliente salvar({int? idFornecido}) {
-    final novoId = idFornecido ?? this.id ?? DateTime.now().millisecondsSinceEpoch;
+    final novoId = idFornecido ?? id ?? DateTime.now().millisecondsSinceEpoch;
     
     return Cliente(
       id: novoId,
