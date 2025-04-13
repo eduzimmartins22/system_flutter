@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'login.dart';
+import 'pages/login.dart';  // Caminho relativo (sem a barra inicial)
 
 void main() {
-  runApp(SalesApp());
+  runApp(const SalesApp());
 }
 
 class SalesApp extends StatelessWidget {
@@ -11,10 +11,15 @@ class SalesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Seu App de Vendas AQUI !!',
+      title: 'App de Vendas',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: LoginPage(),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+        ),
+      ),
+      home: const LoginPage(),
     );
   }
 }
