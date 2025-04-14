@@ -1,103 +1,97 @@
 import 'package:flutter/material.dart';
-import '../../controllers/usuario_controler.dart';
 import '../../models/usuario_model.dart';
+import '../../controllers/usuario_controller.dart';
 
-class EditarUsuario extends StatefulWidget {
+class EditarUsuarioPage extends StatefulWidget {
   final Usuario? usuario;
-  
-  const EditarUsuario({super.key, this.usuario});
+
+  const EditarUsuarioPage({this.usuario, super.key});
 
   @override
-  State<EditarUsuario> createState() => _EditarUsuarioState();
+  State<EditarUsuarioPage> createState() => _EditarUsuarioPageState();
 }
 
-class _EditarUsuarioState extends State<EditarUsuario> {
+class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
   final _formKey = GlobalKey<FormState>();
-  late Usuario _usuarioEditado;
-  final UsuarioController _controller = UsuarioController();
+  final _controller = UsuarioController();
+  late int _id;
+  late String _nome;
+  late String _senha;
+
+  final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _senhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _usuarioEditado = widget.usuario ?? 
-      Usuario(
-        id: DateTime.now().millisecondsSinceEpoch,
-        nome: '',
-        senha: '',
-      );
+    _id = widget.usuario?.id ?? DateTime.now().millisecondsSinceEpoch;
+    _nome = widget.usuario?.nome ?? '';
+    _senha = widget.usuario?.senha ?? '';
+
+    _nomeController.text = _nome;
+    _senhaController.text = _senha;
+    _confirmarSenhaController.text = _senha;
   }
 
-Future<void> _salvarUsuario() async {
-  if (_formKey.currentState!.validate()) {
-    _formKey.currentState!.save();
-    try {
-      if (widget.usuario == null) {
-        // Para novo usuário, o ID será gerado automaticamente no controller
-        await _controller.adicionarUsuario(_usuarioEditado.nome, _usuarioEditado.senha);
-      } else {
-        // Para edição, garantimos que o ID não é nulo
-        if (_usuarioEditado.id == null) {
-          throw Exception('ID do usuário não pode ser nulo');
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _senhaController.dispose();
+    _confirmarSenhaController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _salvarUsuario() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      if (_senhaController.text != _confirmarSenhaController.text) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('As senhas não coincidem!')),
+        );
+        return;
+      }
+
+      try {
+        final novoUsuario = Usuario(
+          id: _id,
+          nome: _nomeController.text,
+          senha: _senhaController.text,
+        );
+
+        bool sucesso;
+        if (widget.usuario == null) {
+          final nomeExiste = await _controller.nomeUsuarioExiste(novoUsuario.nome);
+          if (nomeExiste) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Nome de usuário já existe!')),
+            );
+            return;
+          }
+          
+          await _controller.adicionarUsuario(novoUsuario);
+          sucesso = true;
+        } else {
+          sucesso = await _controller.atualizarUsuario(novoUsuario);
         }
-        await _controller.atualizarUsuario(
-          _usuarioEditado.id!, // Usamos ! para afirmar que não é nulo
-          _usuarioEditado.nome, 
-          _usuarioEditado.senha
+
+        if (sucesso && mounted) {
+          Navigator.pop(context, true);
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
         );
       }
-      
-      if (!mounted) return;
-      Navigator.pop(context, true);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    }
-  }
-}
-
-   Future<void> _excluirUsuario() async {
-    if (widget.usuario != null && widget.usuario!.id != null) {
-      final success = await _controller.removerUsuario(widget.usuario!.id!);
-      if (!mounted) return;
-      Navigator.pop(context, success);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEdicao = widget.usuario != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.usuario == null ? 'Novo Usuário' : 'Editar Usuário'),
-        actions: [
-          if (widget.usuario != null)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Confirmar Exclusão'),
-                    content: const Text('Deseja realmente excluir este usuário?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancelar'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _excluirUsuario();
-                        },
-                        child: const Text('Excluir'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-        ],
+        title: Text(isEdicao ? 'Editar Usuário' : 'Novo Usuário'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -105,53 +99,103 @@ Future<void> _salvarUsuario() async {
           key: _formKey,
           child: Column(
             children: [
-              if (widget.usuario != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    'ID: ${_usuarioEditado.id}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
               TextFormField(
-                initialValue: _usuarioEditado.nome,
+                controller: _nomeController,
                 decoration: const InputDecoration(
-                  labelText: 'Nome do Usuário *',
+                  labelText: 'Nome de usuário',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor, insira um nome';
+                    return 'Por favor, insira o nome de usuário';
                   }
                   return null;
                 },
-                onChanged: (value) => _usuarioEditado = _usuarioEditado.copyWith(nome: value),
               ),
               const SizedBox(height: 16),
               TextFormField(
-                initialValue: _usuarioEditado.senha,
-                decoration: const InputDecoration(
-                  labelText: 'Senha *',
-                ),
+                controller: _senhaController,
                 obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Senha',
+                  border: OutlineInputBorder(),
+                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor, insira uma senha';
+                    return 'Por favor, insira a senha';
                   }
                   if (value.length < 6) {
                     return 'A senha deve ter pelo menos 6 caracteres';
                   }
                   return null;
                 },
-                onChanged: (value) => _usuarioEditado = _usuarioEditado.copyWith(senha: value),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _confirmarSenhaController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirmar Senha',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, confirme a senha';
+                  }
+                  if (value != _senhaController.text) {
+                    return 'As senhas não coincidem';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _salvarUsuario,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _salvarUsuario,
+                  child: const Text('Salvar', style: TextStyle(fontSize: 16)),
                 ),
-                child: const Text('Salvar Usuário'),
               ),
+              if (isEdicao) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final confirmado = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Confirmar Exclusão'),
+                          content: const Text('Deseja realmente excluir este usuário?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Excluir'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmado == true && mounted) {
+                        final sucesso = await _controller.removerUsuario(_id);
+                        if (sucesso) {
+                          Navigator.pop(context, true);
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    child: const Text('Excluir Usuário'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -1,95 +1,99 @@
 import 'package:flutter/material.dart';
-import '../../controllers/produto_controller.dart';
 import '../../models/produto_model.dart';
+import '../../controllers/produto_controller.dart';
 
-class EditarProduto extends StatefulWidget {
+class EditarProdutoPage extends StatefulWidget {
   final Produto? produto;
-  
-  const EditarProduto({super.key, this.produto});
+
+  const EditarProdutoPage({this.produto, super.key});
 
   @override
-  State<EditarProduto> createState() => _EditarProdutoState();
+  State<EditarProdutoPage> createState() => _EditarProdutoPageState();
 }
 
-class _EditarProdutoState extends State<EditarProduto> {
+class _EditarProdutoPageState extends State<EditarProdutoPage> {
   final _formKey = GlobalKey<FormState>();
-  late Produto _produtoEditado;
-  final ProdutoController _controller = ProdutoController();
+  final _controller = ProdutoController();
+  late Produto _produto;
+
+  final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _quantidadeController = TextEditingController();
+  final TextEditingController _precoVendaController = TextEditingController();
+  final TextEditingController _precoCustoController = TextEditingController();
+  final TextEditingController _codigoBarrasController = TextEditingController();
+
+  UnidadeProduto _unidadeSelecionada = UnidadeProduto.un;
+  StatusProduto _statusSelecionado = StatusProduto.ativo;
 
   @override
   void initState() {
     super.initState();
-    _produtoEditado = widget.produto ?? 
-      Produto(
-        id: DateTime.now().millisecondsSinceEpoch,
-        nome: '',
-        unidade: UnidadeProduto.un,
-        quantidadeEstoque: 0,
-        precoVenda: 0,
-        status: StatusProduto.ativo,
-        precoCusto: null,
-        codigoBarras: null,
-      );
+    _produto = widget.produto ?? Produto(
+      id: 0,
+      nome: '',
+      unidade: UnidadeProduto.un,
+      quantidadeEstoque: 0,
+      precoVenda: 0,
+      status: StatusProduto.ativo,
+    );
+
+    _nomeController.text = _produto.nome;
+    _quantidadeController.text = _produto.quantidadeEstoque.toString();
+    _precoVendaController.text = _produto.precoVenda.toString();
+    _precoCustoController.text = _produto.precoCusto?.toString() ?? '';
+    _codigoBarrasController.text = _produto.codigoBarras ?? '';
+    _unidadeSelecionada = _produto.unidade;
+    _statusSelecionado = _produto.status;
+  }
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _quantidadeController.dispose();
+    _precoVendaController.dispose();
+    _precoCustoController.dispose();
+    _codigoBarrasController.dispose();
+    super.dispose();
   }
 
   Future<void> _salvarProduto() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      try {
-        final success = widget.produto == null 
-            ? await _controller.adicionarProduto(_produtoEditado) != null
-            : await _controller.atualizarProduto(_produtoEditado);
-        
-        if (!mounted) return;
-        Navigator.pop(context, true);
-      } catch (e) {
-        if (!mounted) return;
-        Navigator.pop(context, false);
-      }
-    }
-  }
+    if (_formKey.currentState?.validate() ?? false) {
+      final novoProduto = Produto(
+        id: _produto.id,
+        nome: _nomeController.text,
+        unidade: _unidadeSelecionada,
+        quantidadeEstoque: int.parse(_quantidadeController.text),
+        precoVenda: double.parse(_precoVendaController.text),
+        status: _statusSelecionado,
+        precoCusto: _precoCustoController.text.isNotEmpty 
+            ? double.parse(_precoCustoController.text) 
+            : null,
+        codigoBarras: _codigoBarrasController.text.isNotEmpty
+            ? _codigoBarrasController.text
+            : null,
+      );
 
-  Future<void> _excluirProduto() async {
-    if (widget.produto != null) {
-      final success = await _controller.removerProduto(widget.produto!.id);
-      if (!mounted) return;
-      Navigator.pop(context, success);
+      bool sucesso;
+      if (widget.produto == null) {
+        await _controller.adicionarProduto(novoProduto);
+        sucesso = true;
+      } else {
+        sucesso = await _controller.atualizarProduto(novoProduto);
+      }
+
+      if (sucesso && mounted) {
+        Navigator.pop(context, true);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEdicao = widget.produto != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.produto == null ? 'Novo Produto' : 'Editar Produto'),
-        actions: [
-          if (widget.produto != null)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Confirmar Exclusão'),
-                    content: const Text('Deseja realmente excluir este produto?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancelar'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _excluirProduto();
-                        },
-                        child: const Text('Excluir'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-        ],
+        title: Text(isEdicao ? 'Editar Produto' : 'Novo Produto'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -98,21 +102,18 @@ class _EditarProdutoState extends State<EditarProduto> {
           child: Column(
             children: [
               TextFormField(
-                initialValue: _produtoEditado.nome,
-                decoration: const InputDecoration(
-                  labelText: 'Nome do Produto *',
-                ),
+                controller: _nomeController,
+                decoration: const InputDecoration(labelText: 'Nome do Produto'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor, insira um nome';
+                    return 'Por favor, insira o nome do produto';
                   }
                   return null;
                 },
-                onSaved: (value) => _produtoEditado = _produtoEditado.copyWith(nome: value),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<UnidadeProduto>(
-                value: _produtoEditado.unidade,
+                value: _unidadeSelecionada,
                 items: UnidadeProduto.values.map((unidade) {
                   return DropdownMenuItem(
                     value: unidade,
@@ -122,85 +123,57 @@ class _EditarProdutoState extends State<EditarProduto> {
                 onChanged: (value) {
                   if (value != null) {
                     setState(() {
-                      _produtoEditado = _produtoEditado.copyWith(unidade: value);
+                      _unidadeSelecionada = value;
                     });
                   }
                 },
-                decoration: const InputDecoration(
-                  labelText: 'Unidade *',
-                ),
+                decoration: const InputDecoration(labelText: 'Unidade'),
               ),
               const SizedBox(height: 16),
               TextFormField(
-                initialValue: _produtoEditado.quantidadeEstoque.toString(),
-                decoration: const InputDecoration(
-                  labelText: 'Quantidade em Estoque *',
-                ),
+                controller: _quantidadeController,
+                decoration: const InputDecoration(labelText: 'Quantidade em Estoque'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor, insira a quantidade';
                   }
                   if (int.tryParse(value) == null) {
-                    return 'Valor inválido';
+                    return 'Por favor, insira um número válido';
                   }
                   return null;
                 },
-                onSaved: (value) => _produtoEditado = _produtoEditado.copyWith(
-                  quantidadeEstoque: int.parse(value!),
-                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
-                initialValue: _produtoEditado.precoVenda.toString(),
-                decoration: const InputDecoration(
-                  labelText: 'Preço de Venda *',
-                ),
+                controller: _precoVendaController,
+                decoration: const InputDecoration(labelText: 'Preço de Venda'),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o preço';
+                    return 'Por favor, insira o preço de venda';
                   }
                   if (double.tryParse(value) == null) {
-                    return 'Valor inválido';
+                    return 'Por favor, insira um valor válido';
                   }
                   return null;
                 },
-                onSaved: (value) => _produtoEditado = _produtoEditado.copyWith(
-                  precoVenda: double.parse(value!),
-                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
-                initialValue: _produtoEditado.precoCusto?.toString(),
-                decoration: const InputDecoration(
-                  labelText: 'Preço de Custo',
-                ),
+                controller: _precoCustoController,
+                decoration: const InputDecoration(labelText: 'Preço de Custo (opcional)'),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value != null && value.isNotEmpty && double.tryParse(value) == null) {
-                    return 'Valor inválido';
-                  }
-                  return null;
-                },
-                onSaved: (value) => _produtoEditado = _produtoEditado.copyWith(
-                  precoCusto: value?.isEmpty ?? true ? null : double.parse(value!),
-                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
-                initialValue: _produtoEditado.codigoBarras,
-                decoration: const InputDecoration(
-                  labelText: 'Código de Barras',
-                ),
+                controller: _codigoBarrasController,
+                decoration: const InputDecoration(labelText: 'Código de Barras (opcional)'),
                 keyboardType: TextInputType.text,
-                onSaved: (value) => _produtoEditado = _produtoEditado.copyWith(
-                  codigoBarras: value?.isEmpty ?? true ? null : value,
-                ),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<StatusProduto>(
-                value: _produtoEditado.status,
+                value: _statusSelecionado,
                 items: StatusProduto.values.map((status) {
                   return DropdownMenuItem(
                     value: status,
@@ -210,22 +183,52 @@ class _EditarProdutoState extends State<EditarProduto> {
                 onChanged: (value) {
                   if (value != null) {
                     setState(() {
-                      _produtoEditado = _produtoEditado.copyWith(status: value);
+                      _statusSelecionado = value;
                     });
                   }
                 },
-                decoration: const InputDecoration(
-                  labelText: 'Status *',
-                ),
+                decoration: const InputDecoration(labelText: 'Status'),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _salvarProduto,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: const Text('Salvar Produto'),
+                child: const Text('Salvar'),
               ),
+              if (isEdicao) ...[
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    final confirmado = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Confirmar Exclusão'),
+                        content: const Text('Deseja realmente excluir este produto?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancelar'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Excluir'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmado == true && mounted) {
+                      final sucesso = await _controller.removerProduto(_produto.id);
+                      if (sucesso) {
+                        Navigator.pop(context, true);
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                  ),
+                  child: const Text('Excluir Produto'),
+                ),
+              ],
             ],
           ),
         ),

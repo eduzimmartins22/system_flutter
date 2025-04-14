@@ -5,11 +5,8 @@ import '../models/usuario_model.dart';
 class UsuarioController {
   static const _usuariosKey = 'lista_usuarios';
   List<Usuario> _usuarios = [];
-  bool _listaCarregada = false;
 
   Future<void> _carregarLista() async {
-    if (_listaCarregada) return;
-    
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_usuariosKey);
     
@@ -20,15 +17,15 @@ class UsuarioController {
       } catch (e) {
         _usuarios = [];
       }
+    } else {
+      _usuarios = [];
     }
-    _listaCarregada = true;
   }
 
   Future<void> _salvarLista() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonList = _usuarios.map((usuario) => usuario.toJson()).toList();
     await prefs.setString(_usuariosKey, json.encode(jsonList));
-    _listaCarregada = false;
   }
 
   Future<List<Usuario>> getUsuarios() async {
@@ -36,41 +33,34 @@ class UsuarioController {
     return _usuarios.toList();
   }
 
-  Future<int> adicionarUsuario(String nome, String senha) async {
+  Future<int> adicionarUsuario(Usuario usuario) async {
     await _carregarLista();
     
-    // Verifica se já existe usuário com este nome
-    if (_usuarios.any((u) => u.nome == nome)) {
-      throw Exception('Nome de usuário já está em uso');
+    if (_usuarios.any((u) => u.nome == usuario.nome)) {
+      throw Exception('Já existe um usuário com este nome');
     }
     
-    final novoId = _gerarNovoId();
-    final novoUsuario = Usuario(
-      id: novoId,
-      nome: nome,
-      senha: senha,
-    );
+    if (_usuarios.any((u) => u.id == usuario.id)) {
+      final novoUsuario = usuario.copyWith(id: _gerarNovoId());
+      _usuarios.add(novoUsuario);
+    } else {
+      _usuarios.add(usuario);
+    }
     
-    _usuarios.add(novoUsuario);
     await _salvarLista();
-    return novoId;
+    return usuario.id;
   }
 
-  Future<bool> atualizarUsuario(int id, String nome, String senha) async {
+  Future<bool> atualizarUsuario(Usuario usuario) async {
     await _carregarLista();
     
-    final index = _usuarios.indexWhere((u) => u.id == id);
+    final index = _usuarios.indexWhere((u) => u.id == usuario.id);
     if (index >= 0) {
-      // Verifica se o novo nome já está em uso por outro usuário
-      if (_usuarios.any((u) => u.id != id && u.nome == nome)) {
-        throw Exception('Nome de usuário já está em uso');
+      if (_usuarios.any((u) => u.id != usuario.id && u.nome == usuario.nome)) {
+        throw Exception('Já existe um usuário com este nome');
       }
       
-      _usuarios[index] = Usuario(
-        id: id,
-        nome: nome,
-        senha: senha,
-      );
+      _usuarios[index] = usuario;
       await _salvarLista();
       return true;
     }
@@ -90,23 +80,23 @@ class UsuarioController {
     return removed;
   }
 
-Future<Usuario?> buscarPorId(int id) async {
-  await _carregarLista();
-  try {
-    return _usuarios.firstWhere((u) => u.id == id);
-  } catch (e) {
-    return null;
+  Future<Usuario?> buscarPorId(int id) async {
+    await _carregarLista();
+    try {
+      return _usuarios.firstWhere((u) => u.id == id);
+    } catch (e) {
+      return null;
+    }
   }
-}
 
-Future<Usuario?> buscarPorNomeESenha(String nome, String senha) async {
-  await _carregarLista();
-  try {
-    return _usuarios.firstWhere((u) => u.nome == nome && u.senha == senha);
-  } catch (e) {
-    return null;
+  Future<Usuario?> buscarPorNomeESenha(String nome, String senha) async {
+    await _carregarLista();
+    try {
+      return _usuarios.firstWhere((u) => u.nome == nome && u.senha == senha);
+    } catch (e) {
+      return null;
+    }
   }
-}
 
   Future<bool> nomeUsuarioExiste(String nome) async {
     await _carregarLista();
