@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../controllers/produto_controller.dart';
 import '../../models/produto_model.dart';
+import '../../controllers/produto_controller.dart';
 import 'editar_produto.dart';
 
-class CadastroProduto extends StatefulWidget {
-  const CadastroProduto({super.key});
+class CadastroProdutoPage extends StatefulWidget {
+  const CadastroProdutoPage({super.key});
 
   @override
-  State<CadastroProduto> createState() => _CadastroProdutoState();
+  State<CadastroProdutoPage> createState() => _CadastroProdutoPageState();
 }
 
-class _CadastroProdutoState extends State<CadastroProduto> {
+class _CadastroProdutoPageState extends State<CadastroProdutoPage> {
   final ProdutoController _controller = ProdutoController();
-  late Future<List<Produto>> _loadProducts;
+  late Future<List<Produto>> _futureProdutos;
 
   @override
   void initState() {
@@ -22,63 +22,120 @@ class _CadastroProdutoState extends State<CadastroProduto> {
 
   void _carregarProdutos() {
     setState(() {
-      _loadProducts = _controller.getProdutos()
-        .then((lista) => lista..sort((a, b) => b.id.compareTo(a.id)));
+      _futureProdutos = _controller.getProdutos();
     });
   }
 
-  void _navegarParaEdicao(Produto? produto) async {
-    final result = await Navigator.push<bool>(
+  void _editarProduto(Produto produto) async {
+    final resultado = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EditarProduto(produto: produto),
-      ),
-    ) ?? false;
+        builder: (context) => EditarProdutoPage(produto: produto),
+    ));
     
-    if (result) _carregarProdutos();
+    if (resultado == true) {
+      _carregarProdutos();
+    }
+  }
+
+  void _adicionarProduto() async {
+    final resultado = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const EditarProdutoPage()),
+    );
+    
+    if (resultado == true) {
+      _carregarProdutos();
+    }
+  }
+
+  Future<void> _confirmarExclusao(Produto produto) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Exclusão'),
+        content: Text('Deseja realmente excluir o produto ${produto.nome}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado == true) {
+      final sucesso = await _controller.removerProduto(produto.id);
+      if (sucesso && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Produto excluído com sucesso')),
+        );
+        _carregarProdutos();
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cadastro de Produtos'),
+        title: const Text('Produtos Cadastrados'),
       ),
       body: FutureBuilder<List<Produto>>(
-        future: _loadProducts,
+        future: _futureProdutos,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           if (snapshot.hasError) {
-            return const Center(child: Text('Erro ao carregar produtos'));
+            return Center(child: Text('Erro: ${snapshot.error}'));
           }
-          
+
           final produtos = snapshot.data ?? [];
-          
+
+          if (produtos.isEmpty) {
+            return const Center(child: Text('Nenhum produto cadastrado'));
+          }
+
           return ListView.builder(
             itemCount: produtos.length,
             itemBuilder: (context, index) {
               final produto = produtos[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: ListTile(
-                  title: Text(produto.nome),
-                  subtitle: Text(
-                    '${produto.unidade.descricao} - R\$${produto.precoVenda.toStringAsFixed(2)}',
-                  ),
-                  trailing: Text('Estoque: ${produto.quantidadeEstoque}'),
-                  onTap: () => _navegarParaEdicao(produto),
+              return ListTile(
+                title: Text(produto.nome),
+                subtitle: Text(
+                  '${produto.quantidadeEstoque} ${produto.unidade.descricao} - '
+                  'R\$ ${produto.precoVenda.toStringAsFixed(2)}',
                 ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () => _editarProduto(produto),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => _confirmarExclusao(produto),
+                    ),
+                  ],
+                ),
+                onTap: () => _editarProduto(produto),
               );
             },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navegarParaEdicao(null),
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _adicionarProduto,
+        icon: const Icon(Icons.add),
+        label: const Text("Novo Produto"),
       ),
     );
   }

@@ -1,65 +1,58 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../../controllers/cliente_controler.dart';
 import '../../models/cliente_model.dart';
+import '../../controllers/cliente_controller.dart';
 
-class EditarCliente extends StatefulWidget {
+class EditarClientePage extends StatefulWidget {
   final Cliente? cliente;
 
-  const EditarCliente({super.key, this.cliente});
+  const EditarClientePage({this.cliente, super.key});
 
   @override
-  State<EditarCliente> createState() => _EditarClienteState();
+  State<EditarClientePage> createState() => _EditarClientePageState();
 }
 
-class _EditarClienteState extends State<EditarCliente> {
+class _EditarClientePageState extends State<EditarClientePage> {
   final _formKey = GlobalKey<FormState>();
   final _controller = ClienteController();
-  
-  late String _tipo;
-  late TextEditingController _nomeController;
-  late TextEditingController _cpfController;
-  late TextEditingController _cnpjController;
-  late TextEditingController _emailController;
-  late TextEditingController _telefoneController;
-  late TextEditingController _cepController;
-  late TextEditingController _enderecoController;
-  late TextEditingController _numeroController;
-  late TextEditingController _bairroController;
-  late TextEditingController _cidadeController;
-  late TextEditingController _ufController;
+  late int _id;
+  late TipoCliente _tipoSelecionado;
+  final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _cpfCnpjController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _numeroController = TextEditingController();
+  final TextEditingController _cepController = TextEditingController();
+  final TextEditingController _enderecoController = TextEditingController();
+  final TextEditingController _bairroController = TextEditingController();
+  final TextEditingController _cidadeController = TextEditingController();
+  final TextEditingController _ufController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    final cliente = widget.cliente;
+    _id = widget.cliente?.id ?? DateTime.now().millisecondsSinceEpoch;
+    _tipoSelecionado = widget.cliente?.tipo ?? TipoCliente.fisica;
     
-    _tipo = cliente?.tipo ?? 'F';
-    _nomeController = TextEditingController(text: cliente?.nome ?? '');
-    _cpfController = TextEditingController(text: cliente?.cpf ?? '');
-    _cnpjController = TextEditingController(text: cliente?.cnpj ?? '');
-    _emailController = TextEditingController(text: cliente?.email ?? '');
-    _numeroController = TextEditingController(
-    text: cliente?.numero != null ? cliente!.numero.toString() : ''
-  );
-    _cepController = TextEditingController(text: cliente?.cep?.toString() ?? '');
-    _enderecoController = TextEditingController(text: cliente?.endereco ?? '');
-    _numeroController = TextEditingController(text: cliente?.numero?.toString() ?? '');
-    _bairroController = TextEditingController(text: cliente?.bairro ?? '');
-    _cidadeController = TextEditingController(text: cliente?.cidade ?? '');
-    _ufController = TextEditingController(text: cliente?.uf ?? '');
+    if (widget.cliente != null) {
+      _nomeController.text = widget.cliente!.nome;
+      _cpfCnpjController.text = widget.cliente!.cpfCnpj;
+      _emailController.text = widget.cliente!.email ?? '';
+      _numeroController.text = widget.cliente!.numero?.toString() ?? '';
+      _cepController.text = widget.cliente!.cep?.toString() ?? '';
+      _enderecoController.text = widget.cliente!.endereco ?? '';
+      _bairroController.text = widget.cliente!.bairro ?? '';
+      _cidadeController.text = widget.cliente!.cidade ?? '';
+      _ufController.text = widget.cliente!.uf ?? '';
+    }
   }
 
   @override
   void dispose() {
     _nomeController.dispose();
-    _cpfController.dispose();
-    _cnpjController.dispose();
+    _cpfCnpjController.dispose();
     _emailController.dispose();
-    _telefoneController.dispose();
+    _numeroController.dispose();
     _cepController.dispose();
     _enderecoController.dispose();
-    _numeroController.dispose();
     _bairroController.dispose();
     _cidadeController.dispose();
     _ufController.dispose();
@@ -67,48 +60,63 @@ class _EditarClienteState extends State<EditarCliente> {
   }
 
   Future<void> _salvarCliente() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState?.validate() ?? false) {
       try {
-        final cliente = Cliente(
-          id: widget.cliente?.id,
+        final novoCliente = Cliente(
+          id: _id,
           nome: _nomeController.text,
-          tipo: _tipo,
-          cpf: _tipo == 'F' ? _cpfController.text : null,
-          cnpj: _tipo == 'J' ? _cnpjController.text : null,
-          email: _emailController.text,
-          numero: int.tryParse(_numeroController.text) ?? 0,
-          cep: int.tryParse(_cepController.text) ?? 0,
-          endereco: _enderecoController.text,
-          bairro: _bairroController.text,
-          cidade: _cidadeController.text,
-          uf: _ufController.text,
+          tipo: _tipoSelecionado,
+          cpfCnpj: _cpfCnpjController.text,
+          email: _emailController.text.isNotEmpty ? _emailController.text : null,
+          numero: _numeroController.text.isNotEmpty ? int.parse(_numeroController.text) : null,
+          cep: _cepController.text.isNotEmpty ? int.parse(_cepController.text) : null,
+          endereco: _enderecoController.text.isNotEmpty ? _enderecoController.text : null,
+          bairro: _bairroController.text.isNotEmpty ? _bairroController.text : null,
+          cidade: _cidadeController.text.isNotEmpty ? _cidadeController.text : null,
+          uf: _ufController.text.isNotEmpty ? _ufController.text : null,
         );
 
-        final isEditing = widget.cliente != null;
-        if (isEditing) {
-          await _controller.atualizarCliente(cliente);
+        bool sucesso;
+        if (widget.cliente == null) {
+          // Verificar se documento já existe
+          if (await _controller.documentoExiste(novoCliente.cpfCnpj)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Já existe um cliente com este documento!')),
+            );
+            return;
+          }
+          
+          await _controller.adicionarCliente(novoCliente);
+          sucesso = true;
         } else {
-          await _controller.adicionarCliente(cliente);
+          if (await _controller.documentoExiste(novoCliente.cpfCnpj, novoCliente.id)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Já existe um cliente com este documento!')),
+            );
+            return;
+          }
+          
+          sucesso = await _controller.atualizarCliente(novoCliente);
         }
 
-        if (mounted) {
+        if (sucesso && mounted) {
           Navigator.pop(context, true);
         }
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao salvar: $e')),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEdicao = widget.cliente != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.cliente == null ? 'Novo Cliente' : 'Editar Cliente'),
+        title: Text(isEdicao ? 'Editar Cliente' : 'Novo Cliente'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -116,121 +124,189 @@ class _EditarClienteState extends State<EditarCliente> {
           key: _formKey,
           child: Column(
             children: [
-              // Tipo (F/J)
-              DropdownButtonFormField<String>(
-                value: _tipo,
-                items: const [
-                  DropdownMenuItem(value: 'F', child: Text('Pessoa Física')),
-                  DropdownMenuItem(value: 'J', child: Text('Pessoa Jurídica')),
-                ],
+              DropdownButtonFormField<TipoCliente>(
+                value: _tipoSelecionado,
+                items: TipoCliente.values.map((tipo) {
+                  return DropdownMenuItem(
+                    value: tipo,
+                    child: Text(tipo.descricao),
+                  );
+                }).toList(),
                 onChanged: (value) {
-                  setState(() {
-                    _tipo = value!;
-                  });
+                  if (value != null) {
+                    setState(() {
+                      _tipoSelecionado = value;
+                    });
+                  }
                 },
-                decoration: const InputDecoration(labelText: 'Tipo'),
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de Cliente *',
+                  border: OutlineInputBorder(),
+                ),
               ),
-
-              // Nome
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _nomeController,
-                decoration: const InputDecoration(labelText: 'Nome *'),
-                validator: (value) =>
-                    value!.isEmpty ? 'Campo obrigatório' : null,
-              ),
-
-              // CPF/CNPJ (condicional)
-              if (_tipo == 'F')
-                TextFormField(
-                  controller: _cpfController,
-                  decoration: const InputDecoration(labelText: 'CPF *'),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(11),
-                  ],
-                  validator: (value) => _tipo == 'F' && (value == null || value.isEmpty || value.length != 11)
-                      ? 'CPF inválido (11 dígitos)'
-                      : null,
-                )
-              else
-                TextFormField(
-                  controller: _cnpjController,
-                  decoration: const InputDecoration(labelText: 'CNPJ *'),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(14),
-                  ],
-                  validator: (value) => _tipo == 'J' && (value == null || value.isEmpty || value.length != 14)
-                      ? 'CNPJ inválido (14 dígitos)'
-                      : null,
+                decoration: const InputDecoration(
+                  labelText: 'Nome *',
+                  border: OutlineInputBorder(),
                 ),
-
-              // Email
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, insira o nome';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _cpfCnpjController,
+                decoration: InputDecoration(
+                  labelText: _tipoSelecionado == TipoCliente.fisica ? 'CPF *' : 'CNPJ *',
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, insira o documento';
+                  }
+                  if (_tipoSelecionado == TipoCliente.fisica && value.length != 11) {
+                    return 'CPF deve ter 11 dígitos';
+                  }
+                  if (_tipoSelecionado == TipoCliente.juridica && value.length != 14) {
+                    return 'CNPJ deve ter 14 dígitos';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'E-mail *'),
+                decoration: const InputDecoration(
+                  labelText: 'E-mail',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) =>
-                    value!.isEmpty || !value.contains('@') ? 'E-mail inválido' : null,
               ),
-
-              // Telefone
-              TextFormField(
-                controller: _telefoneController,
-                decoration: const InputDecoration(labelText: 'Telefone'),
-                keyboardType: TextInputType.phone,
-              ),
-
-              // CEP
-              TextFormField(
-                controller: _cepController,
-                decoration: const InputDecoration(labelText: 'CEP'),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(8),
-                ],
-              ),
-
-              // Endereço
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _enderecoController,
-                decoration: const InputDecoration(labelText: 'Endereço'),
+                decoration: const InputDecoration(
+                  labelText: 'Endereço',
+                  border: OutlineInputBorder(),
+                ),
               ),
-
-              // Número
-              TextFormField(
-                controller: _numeroController,
-                decoration: const InputDecoration(labelText: 'Número'),
-                keyboardType: TextInputType.number,
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: _numeroController,
+                      decoration: const InputDecoration(
+                        labelText: 'Número',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 4,
+                    child: TextFormField(
+                      controller: _cepController,
+                      decoration: const InputDecoration(
+                        labelText: 'CEP',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
               ),
-
-              // Bairro
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _bairroController,
-                decoration: const InputDecoration(labelText: 'Bairro'),
+                decoration: const InputDecoration(
+                  labelText: 'Bairro',
+                  border: OutlineInputBorder(),
+                ),
               ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: _cidadeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Cidade',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _ufController,
+                      decoration: const InputDecoration(
+                        labelText: 'UF',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLength: 2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _salvarCliente,
+                  child: const Text('Salvar', style: TextStyle(fontSize: 16)),
+                ),
+              ),
+              if (isEdicao) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final confirmado = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Confirmar Exclusão'),
+                          content: const Text('Deseja realmente excluir este cliente?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Excluir'),
+                            ),
+                          ],
+                        ),
+                      );
 
-              // Cidade
-              TextFormField(
-                controller: _cidadeController,
-                decoration: const InputDecoration(labelText: 'Cidade'),
-              ),
-
-              // UF
-              TextFormField(
-                controller: _ufController,
-                decoration: const InputDecoration(labelText: 'UF'),
-                maxLength: 2,
-              ),
-
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _salvarCliente,
-                child: const Text('Salvar Cliente'),
-              ),
+                      if (confirmado == true && mounted) {
+                        final sucesso = await _controller.removerCliente(_id);
+                        if (sucesso) {
+                          Navigator.pop(context, true);
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    child: const Text('Excluir Cliente'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

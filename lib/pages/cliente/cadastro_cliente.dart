@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../controllers/cliente_controler.dart';
 import '../../models/cliente_model.dart';
+import '../../controllers/cliente_controller.dart';
 import 'editar_cliente.dart';
 
-class CadastroCliente extends StatefulWidget {
-  const CadastroCliente({super.key});
+class CadastroClientePage extends StatefulWidget {
+  const CadastroClientePage({super.key});
 
   @override
-  State<CadastroCliente> createState() => _CadastroClienteState();
+  State<CadastroClientePage> createState() => _CadastroClientePageState();
 }
 
-class _CadastroClienteState extends State<CadastroCliente> {
+class _CadastroClientePageState extends State<CadastroClientePage> {
   final ClienteController _controller = ClienteController();
-  late Future<List<Cliente>> _loadClients;
+  late Future<List<Cliente>> _futureClientes;
 
   @override
   void initState() {
@@ -22,23 +22,37 @@ class _CadastroClienteState extends State<CadastroCliente> {
 
   void _carregarClientes() {
     setState(() {
-      _loadClients = _controller.getClientes()
-        .then((lista) => lista..sort((a, b) => (b.id ?? 0).compareTo(a.id ?? 0)));
+      _futureClientes = _controller.getClientes();
     });
   }
 
-  void _navegarParaEdicao(Cliente? cliente) async {
-    final result = await Navigator.push<bool>(
+  void _editarCliente(Cliente cliente) async {
+    final resultado = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EditarCliente(cliente: cliente),
+        builder: (context) => EditarClientePage(cliente: cliente),
       ),
-    ) ?? false;
+    );
     
-    if (result) _carregarClientes();
+    if (resultado == true) {
+      _carregarClientes();
+    }
   }
 
-  void _confirmarExclusao(Cliente cliente) async {
+  void _adicionarCliente() async {
+    final resultado = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const EditarClientePage(),
+      ),
+    );
+    
+    if (resultado == true) {
+      _carregarClientes();
+    }
+  }
+
+  Future<void> _confirmarExclusao(Cliente cliente) async {
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -51,17 +65,17 @@ class _CadastroClienteState extends State<CadastroCliente> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+            child: const Text('Excluir'),
           ),
         ],
       ),
     );
 
     if (confirmado == true) {
-      final sucesso = await _controller.removerCliente(cliente.id!);
+      final sucesso = await _controller.removerCliente(cliente.id);
       if (sucesso && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cliente ${cliente.nome} removido com sucesso')),
+          const SnackBar(content: Text('Cliente excluído com sucesso')),
         );
         _carregarClientes();
       }
@@ -72,67 +86,55 @@ class _CadastroClienteState extends State<CadastroCliente> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cadastro de Clientes'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _carregarClientes,
-          ),
-        ],
+        title: const Text('Clientes Cadastrados'),
       ),
       body: FutureBuilder<List<Cliente>>(
-        future: _loadClients,
+        future: _futureClientes,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Erro ao carregar clientes: ${snapshot.error}'),
-            );
+            return Center(child: Text('Erro: ${snapshot.error}'));
           }
-          
+
           final clientes = snapshot.data ?? [];
-          
+
           if (clientes.isEmpty) {
-            return const Center(
-              child: Text('Nenhum cliente cadastrado'),
-            );
+            return const Center(child: Text('Nenhum cliente cadastrado'));
           }
-          
+
           return ListView.builder(
             itemCount: clientes.length,
             itemBuilder: (context, index) {
               final cliente = clientes[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: ListTile(
-                  title: Text(cliente.nome),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(cliente.tipo == 'F' 
-                          ? 'CPF: ${cliente.cpf}' 
-                          : 'CNPJ: ${cliente.cnpj}'),
-                      Text('${cliente.cidade}/${cliente.uf}'),
-                      Text(cliente.email),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _confirmarExclusao(cliente),
-                  ),
-                  onTap: () => _navegarParaEdicao(cliente),
+              return ListTile(
+                title: Text(cliente.nome),
+                subtitle: Text('${cliente.tipo.descricao} - ${cliente.cpfCnpj}'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () => _editarCliente(cliente),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => _confirmarExclusao(cliente),
+                    ),
+                  ],
                 ),
+                onTap: () => _editarCliente(cliente),
               );
             },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navegarParaEdicao(null),
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _adicionarCliente,
+        icon: const Icon(Icons.add),
+        label: const Text("Novo Cliente"),
       ),
     );
   }
