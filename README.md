@@ -1,16 +1,44 @@
-# sistem_flutter
+# system_flutter
 
-A new Flutter project.
+Um aplicativo Flutter para gerenciar força de vendas.
 
-## Getting Started
+<img src="assets/shop.png" alt="Captura de Tela do App" width="100">
 
-This project is a starting point for a Flutter application.
+## Matrícula dos Componentes da Dupla
+- Eduardo Martins Cardoso
+- Breno Tonini Costa
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Recursos
+- Páginas de listagens para todas as classes.
+- Páginas de criação/edição para todas as classes.
+- Operações de CRUD completas em todas as classes.
+- Autenticação de usuário com controle simples de sessão.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Tecnologias Utilizadas
+- Flutter (Framework de UI)
+- Dart (Linguagem de Programação)
+- Material Design (Interface Moderna)
+- Shared Preferences (Persistência de dados)
+- Path Provider
+ 
+## Como Usar
+- Faça login como admin ou com as credenciais de um usuário cadastrado
+- Gerencie **Produtos**!
+- Gerencie **Clientes**!
+- Gerencie **Usuários**!
+
+## Observações
+
+- Este projeto é um exercício acadêmico de aplicativos mobile focado na introdução dos elementos básicos do Flutter, que são fundamentais para o desenvolvimento de interfaces de usuário eficientes e responsivas.
+- Uso de Shared Preferences para praticar a persistência de dados
+- Uso de classes e boas práticas da linguagem.
+- Criação de CRUDS reativos com os componentes do aplicativo.
+
+## Contribuição
+
+Projeto acadêmico não aberto para contribuições externas. No entanto, sinta-se à vontade para clonar o repositório e realizar modificações para aprendizado pessoal.
+
+---
+
+Desenvolvido como parte da disciplina **Aplicativos Mobile - Faculdade UCL**.
