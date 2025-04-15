@@ -189,44 +189,52 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
                 },
                 decoration: const InputDecoration(labelText: 'Status'),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _salvarProduto,
-                child: const Text('Salvar'),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 50,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _salvarProduto,
+                  child: const Text('Salvar'),
+                ),
               ),
               if (isEdicao) ...[
                 const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () async {
-                    final confirmado = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Confirmar Exclusão'),
-                        content: const Text('Deseja realmente excluir este produto?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancelar'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Excluir'),
-                          ),
-                        ],
-                      ),
-                    );
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final confirmado = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Confirmar Exclusão'),
+                          content: const Text('Deseja realmente excluir este produto?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Excluir'),
+                            ),
+                          ],
+                        ),
+                      );
 
-                    if (confirmado == true && mounted) {
-                      final sucesso = await _controller.removerProduto(_produto.id);
-                      if (sucesso) {
-                        Navigator.pop(context, true);
+                      if (confirmado == true && mounted) {
+                        final sucesso = await _controller.removerProduto(_produto.id);
+                        if (sucesso) {
+                          Navigator.pop(context, true);
+                        }
                       }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Excluir Produto'),
                   ),
-                  child: const Text('Excluir Produto'),
                 ),
               ],
             ],

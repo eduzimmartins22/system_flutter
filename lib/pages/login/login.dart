@@ -71,7 +71,11 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const FlutterLogo(size: 100),
+                Image.asset(
+                  'assets/shop.png',
+                  height: 100,
+                  width: 100,
+                ),
                 const SizedBox(height: 40),
                 TextFormField(
                   controller: _userController,

@@ -78,7 +78,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
         bool sucesso;
         if (widget.cliente == null) {
-          // Verificar se documento já existe
           if (await _controller.documentoExiste(novoCliente.cpfCnpj)) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Já existe um cliente com este documento!')),
@@ -302,6 +301,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
                     ),
                     child: const Text('Excluir Cliente'),
                   ),

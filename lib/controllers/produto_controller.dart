@@ -29,14 +29,13 @@ class ProdutoController {
   }
 
   Future<List<Produto>> getProdutos() async {
-    await _carregarLista(); // Sempre recarrega os dados mais recentes
+    await _carregarLista();
     return _produtos.toList();
   }
 
   Future<int> adicionarProduto(Produto produto) async {
     await _carregarLista();
     
-    // Corrigido a verificação de ID duplicado
     if (_produtos.any((p) => p.id == produto.id)) {
       final novoProduto = produto.copyWith(id: _gerarNovoId());
       _produtos.add(novoProduto);
