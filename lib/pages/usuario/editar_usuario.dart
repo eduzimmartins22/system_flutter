@@ -191,6 +191,7 @@ class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
                     ),
                     child: const Text('Excluir Usuário'),
                   ),

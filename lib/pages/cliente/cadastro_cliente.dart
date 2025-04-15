@@ -33,7 +33,7 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
         builder: (context) => EditarClientePage(cliente: cliente),
       ),
     );
-    
+
     if (resultado == true) {
       _carregarClientes();
     }
@@ -46,7 +46,7 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
         builder: (context) => const EditarClientePage(),
       ),
     );
-    
+
     if (resultado == true) {
       _carregarClientes();
     }
@@ -82,6 +82,99 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
     }
   }
 
+  Widget _buildClienteCard(BuildContext context, Cliente cliente) {
+    final bool isPessoaFisica = cliente.tipo.descricao.toLowerCase().contains('física');
+    final Color badgeColor = isPessoaFisica
+        ? Colors.green.withOpacity(0.1)
+        : Colors.orange.withOpacity(0.1);
+    final Color badgeTextColor = isPessoaFisica ? Colors.green : Colors.orange;
+
+    return Card(
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _editarCliente(cliente),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.person,
+                      color: Theme.of(context).primaryColor,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          cliente.nome,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          cliente.cpfCnpjFormatado,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        color: Colors.red,
+                        iconSize: 24,
+                        onPressed: () => _confirmarExclusao(cliente),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: badgeColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  cliente.tipo.descricao,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: badgeTextColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,27 +199,11 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             itemCount: clientes.length,
             itemBuilder: (context, index) {
               final cliente = clientes[index];
-              return ListTile(
-                title: Text(cliente.nome),
-                subtitle: Text('${cliente.tipo.descricao} - ${cliente.cpfCnpj}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _editarCliente(cliente),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () => _confirmarExclusao(cliente),
-                    ),
-                  ],
-                ),
-                onTap: () => _editarCliente(cliente),
-              );
+              return _buildClienteCard(context, cliente);
             },
           );
         },

@@ -62,7 +62,7 @@ class _HomePageState extends State<HomePage> {
                   'Bem-vindo, $_nomeUsuario!',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onBackground, // Adicione esta linha
+                        color: Theme.of(context).colorScheme.onBackground,
                       ),
                 ),
               ),

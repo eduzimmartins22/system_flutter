@@ -97,6 +97,16 @@ class Cliente {
   String toString() {
     return 'Cliente($id, $nome, ${tipo.descricao}, $cpfCnpj, $email, $endereco, $numero, $cep, $bairro, $cidade, $uf)';
   }
+
+  String get cpfCnpjFormatado {
+    if (tipo == TipoCliente.fisica && cpfCnpj.length == 11) {
+      return '${cpfCnpj.substring(0, 3)}.${cpfCnpj.substring(3, 6)}.${cpfCnpj.substring(6, 9)}-${cpfCnpj.substring(9)}';
+    } else if (tipo == TipoCliente.juridica && cpfCnpj.length == 14) {
+      return '${cpfCnpj.substring(0, 2)}.${cpfCnpj.substring(2, 5)}.${cpfCnpj.substring(5, 8)}/${cpfCnpj.substring(8, 12)}-${cpfCnpj.substring(12)}';
+    } else {
+      return cpfCnpj;
+    }
+  }
 }
 
 enum TipoCliente {

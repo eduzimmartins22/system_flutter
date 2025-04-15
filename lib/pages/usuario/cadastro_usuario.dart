@@ -31,8 +31,8 @@ class _CadastroUsuarioPageState extends State<CadastroUsuarioPage> {
       context,
       MaterialPageRoute(
         builder: (context) => EditarUsuarioPage(usuario: usuario),
-    ));
-    
+      ),
+    );
     if (resultado == true) {
       _carregarUsuarios();
     }
@@ -42,9 +42,9 @@ class _CadastroUsuarioPageState extends State<CadastroUsuarioPage> {
     final resultado = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const EditarUsuarioPage()),
+        builder: (context) => const EditarUsuarioPage(),
+      ),
     );
-    
     if (resultado == true) {
       _carregarUsuarios();
     }
@@ -80,6 +80,71 @@ class _CadastroUsuarioPageState extends State<CadastroUsuarioPage> {
     }
   }
 
+  Widget _buildUsuarioCard(BuildContext context, Usuario usuario) {
+    return Card(
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _editarUsuario(usuario),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person,
+                  color: Theme.of(context).primaryColor,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      usuario.nome,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'ID: ${usuario.id}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    color: Colors.red,
+                    iconSize: 24,
+                    onPressed: () => _confirmarExclusao(usuario),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,27 +169,11 @@ class _CadastroUsuarioPageState extends State<CadastroUsuarioPage> {
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             itemCount: usuarios.length,
             itemBuilder: (context, index) {
               final usuario = usuarios[index];
-              return ListTile(
-                title: Text(usuario.nome),
-                subtitle: Text('ID: ${usuario.id}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _editarUsuario(usuario),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () => _confirmarExclusao(usuario),
-                    ),
-                  ],
-                ),
-                onTap: () => _editarUsuario(usuario),
-              );
+              return _buildUsuarioCard(context, usuario);
             },
           );
         },
