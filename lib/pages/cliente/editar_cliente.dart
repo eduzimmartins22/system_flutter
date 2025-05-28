@@ -39,12 +39,12 @@ class _EditarClienteState extends State<EditarCliente> {
     _cpfController = TextEditingController(text: cliente?.cpf ?? '');
     _cnpjController = TextEditingController(text: cliente?.cnpj ?? '');
     _emailController = TextEditingController(text: cliente?.email ?? '');
+    _telefoneController = TextEditingController();
     _numeroController = TextEditingController(
-    text: cliente?.numero != null ? cliente!.numero.toString() : ''
-  );
-    _cepController = TextEditingController(text: cliente?.cep?.toString() ?? '');
+      text: cliente?.numero != null ? cliente!.numero.toString() : ''
+    );
+    _cepController = TextEditingController(text: cliente?.cep ?? '');
     _enderecoController = TextEditingController(text: cliente?.endereco ?? '');
-    _numeroController = TextEditingController(text: cliente?.numero?.toString() ?? '');
     _bairroController = TextEditingController(text: cliente?.bairro ?? '');
     _cidadeController = TextEditingController(text: cliente?.cidade ?? '');
     _ufController = TextEditingController(text: cliente?.uf ?? '');
@@ -77,7 +77,7 @@ class _EditarClienteState extends State<EditarCliente> {
           cnpj: _tipo == 'J' ? _cnpjController.text : null,
           email: _emailController.text,
           numero: int.tryParse(_numeroController.text) ?? 0,
-          cep: int.tryParse(_cepController.text) ?? 0,
+          cep: _cepController.text,  
           endereco: _enderecoController.text,
           bairro: _bairroController.text,
           cidade: _cidadeController.text,
