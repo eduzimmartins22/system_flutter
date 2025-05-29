@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
+//test
 class BuscarCepUseCase {
   Future<Map<String, String>> execute(String cep) async {
     final url = Uri.parse('https://viacep.com.br/ws/$cep/json/');
