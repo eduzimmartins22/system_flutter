@@ -44,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
                 // Lógica de login aqui
                 if (_usernameController.text == 'admin' && 
                     _passwordController.text == 'admin') {
-                  Navigator.pushReplacementNamed(context, '/home');
+                  Navigator.pushReplacementNamed(context, '\home.dart');
                 }
               },
               child: const Text('Entrar'),
