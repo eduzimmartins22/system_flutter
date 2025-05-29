@@ -5,11 +5,8 @@ import '../models/produto_model.dart';
 class ProdutoController {
   static const _produtosKey = 'lista_produtos';
   List<Produto> _produtos = [];
-  bool _listaCarregada = false;
 
   Future<void> _carregarLista() async {
-    if (_listaCarregada) return;
-    
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_produtosKey);
     
@@ -20,15 +17,15 @@ class ProdutoController {
       } catch (e) {
         _produtos = [];
       }
+    } else {
+      _produtos = [];
     }
-    _listaCarregada = true;
   }
 
   Future<void> _salvarLista() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonList = _produtos.map((produto) => produto.toJson()).toList();
     await prefs.setString(_produtosKey, json.encode(jsonList));
-    _listaCarregada = false; // Força recarregar na próxima chamada
   }
 
   Future<List<Produto>> getProdutos() async {
@@ -40,14 +37,12 @@ class ProdutoController {
     await _carregarLista();
     
     if (_produtos.any((p) => p.id == produto.id)) {
-      final novoId = _gerarNovoId();
-      final novoProduto = produto.copyWith(id: novoId);
+      final novoProduto = produto.copyWith(id: _gerarNovoId());
       _produtos.add(novoProduto);
-      await _salvarLista();
-      return novoId;
+    } else {
+      _produtos.add(produto);
     }
     
-    _produtos.add(produto);
     await _salvarLista();
     return produto.id;
   }

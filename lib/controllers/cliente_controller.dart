@@ -5,11 +5,8 @@ import '../models/cliente_model.dart';
 class ClienteController {
   static const _clientesKey = 'lista_clientes';
   List<Cliente> _clientes = [];
-  bool _listaCarregada = false;
 
   Future<void> _carregarLista() async {
-    if (_listaCarregada) return;
-    
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_clientesKey);
     
@@ -20,15 +17,15 @@ class ClienteController {
       } catch (e) {
         _clientes = [];
       }
+    } else {
+      _clientes = [];
     }
-    _listaCarregada = true;
   }
 
   Future<void> _salvarLista() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonList = _clientes.map((cliente) => cliente.toJson()).toList();
     await prefs.setString(_clientesKey, json.encode(jsonList));
-    _listaCarregada = false;
   }
 
   Future<List<Cliente>> getClientes() async {
@@ -39,54 +36,35 @@ class ClienteController {
   Future<int> adicionarCliente(Cliente cliente) async {
     await _carregarLista();
     
-    try {
-      // Validações são feitas pelo próprio modelo ao criar
-      final novoCliente = cliente.salvar();
-      
-      // Verifica se já existe cliente com este documento
-      if (novoCliente.tipo == 'F' && _clientes.any((c) => c.cpf == novoCliente.cpf)) {
-        throw Exception('Já existe um cliente com este CPF');
-      }
-      
-      if (novoCliente.tipo == 'J' && _clientes.any((c) => c.cnpj == novoCliente.cnpj)) {
-        throw Exception('Já existe um cliente com este CNPJ');
-      }
-      
-      _clientes.add(novoCliente);
-      await _salvarLista();
-      return novoCliente.id!;
-    } catch (e) {
-      rethrow;
+    if (_clientes.any((c) => c.cpfCnpj == cliente.cpfCnpj)) {
+      throw Exception('Já existe um cliente com este documento');
     }
+    
+    if (_clientes.any((c) => c.id == cliente.id)) {
+      final novoCliente = cliente.copyWith(id: _gerarNovoId());
+      _clientes.add(novoCliente);
+    } else {
+      _clientes.add(cliente);
+    }
+    
+    await _salvarLista();
+    return cliente.id;
   }
 
   Future<bool> atualizarCliente(Cliente cliente) async {
     await _carregarLista();
     
-    try {
-      final clienteAtualizado = cliente.salvar();
-      final index = _clientes.indexWhere((c) => c.id == clienteAtualizado.id);
-      
-      if (index >= 0) {
-        // Verifica se o documento foi alterado e se já existe
-        if (clienteAtualizado.tipo == 'F' && 
-            _clientes.any((c) => c.id != clienteAtualizado.id && c.cpf == clienteAtualizado.cpf)) {
-          throw Exception('Já existe um cliente com este CPF');
-        }
-        
-        if (clienteAtualizado.tipo == 'J' && 
-            _clientes.any((c) => c.id != clienteAtualizado.id && c.cnpj == clienteAtualizado.cnpj)) {
-          throw Exception('Já existe um cliente com este CNPJ');
-        }
-        
-        _clientes[index] = clienteAtualizado;
-        await _salvarLista();
-        return true;
+    final index = _clientes.indexWhere((c) => c.id == cliente.id);
+    if (index >= 0) {
+      if (_clientes.any((c) => c.id != cliente.id && c.cpfCnpj == cliente.cpfCnpj)) {
+        throw Exception('Já existe um cliente com este documento');
       }
-      return false;
-    } catch (e) {
-      rethrow;
+      
+      _clientes[index] = cliente;
+      await _salvarLista();
+      return true;
     }
+    return false;
   }
 
   Future<bool> removerCliente(int id) async {
@@ -114,9 +92,7 @@ class ClienteController {
   Future<Cliente?> buscarPorDocumento(String documento) async {
     await _carregarLista();
     try {
-      return _clientes.firstWhere((c) => 
-        (c.tipo == 'F' && c.cpf == documento) || 
-        (c.tipo == 'J' && c.cnpj == documento));
+      return _clientes.firstWhere((c) => c.cpfCnpj == documento);
     } catch (e) {
       return null;
     }
@@ -126,7 +102,10 @@ class ClienteController {
     await _carregarLista();
     return _clientes.any((c) => 
       (idExcluir == null || c.id != idExcluir) &&
-      ((c.tipo == 'F' && c.cpf == documento) || 
-       (c.tipo == 'J' && c.cnpj == documento)));
+      c.cpfCnpj == documento);
+  }
+
+  int _gerarNovoId() {
+    return DateTime.now().millisecondsSinceEpoch;
   }
 }

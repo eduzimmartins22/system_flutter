@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pages/login.dart';  // Caminho relativo (sem a barra inicial)
+import 'login.dart';
 
 void main() {
   runApp(const SalesApp());
@@ -8,18 +8,18 @@ void main() {
 class SalesApp extends StatelessWidget {
   const SalesApp({super.key});
 
+  Future<bool> _verificarLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('logado') ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'App de Vendas',
+      title: 'Seu App de Vendas AQUI !!',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-        ),
-      ),
-      home: const LoginPage(),
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: LoginPage(),
     );
   }
 }
