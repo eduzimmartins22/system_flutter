@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'pages/login/login.dart';
 import 'pages/home/home.dart';
+import 'database/db_helper.dart';
 
-void main() {
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  final dbHelper = DatabaseHelper();
+  await dbHelper.database;
   runApp(const SalesApp());
 }
 
