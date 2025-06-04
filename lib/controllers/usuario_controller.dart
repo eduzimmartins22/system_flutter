@@ -17,8 +17,9 @@ class UsuarioController {
     if (existe) {
       throw Exception('Já existe um usuário com este nome');
     }
-    
-    return await db.insert('usuarios', usuario.toJson());
+    final map = usuario.toJson();
+    map.remove('id');
+    return await db.insert('usuarios', map);
   }
 
   Future<bool> atualizarUsuario(Usuario usuario) async {

@@ -25,7 +25,7 @@ class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
   @override
   void initState() {
     super.initState();
-    _id = widget.usuario?.id ?? DateTime.now().millisecondsSinceEpoch;
+    _id = widget.usuario?.id ?? 0;
     _nome = widget.usuario?.nome ?? '';
     _senha = widget.usuario?.senha ?? '';
 
