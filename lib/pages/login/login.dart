@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../controllers/usuario_controller.dart';
 import '../home/home.dart';
 
@@ -22,41 +21,34 @@ class _LoginPageState extends State<LoginPage> {
     final username = _userController.text;
     final password = _passwordController.text;
 
-    if (username == 'admin' && password == 'admin') {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('logado', true);
-      await prefs.setString('nomeUsuario', 'admin');
-      
-      if (mounted) {
+    try {
+      // Verifica o usuário admin padrão
+      if (username == 'admin' && password == 'admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(builder: (context) => const HomePage(userName: 'admin')),
         );
+        return;
       }
-    } else {
+
       final usuario = await _usuarioController.buscarPorNomeESenha(username, password);
       
       if (usuario != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('logado', true);
-        await prefs.setString('nomeUsuario', usuario.nome);
-        
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
-          );
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage(userName: usuario.nome)),
+        );
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Usuário ou senha inválidos!')),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Usuário ou senha inválidos!')),
+        );
       }
-    }
-    
-    if (mounted) {
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao fazer login: ${e.toString()}')),
+      );
+    } finally {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }

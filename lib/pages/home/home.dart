@@ -1,42 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../produto/cadastro_produto.dart';
 import '../usuario/cadastro_usuario.dart';
 import '../cliente/cadastro_cliente.dart';
 import '../login/login.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, required this.userName});
+  
+  final String userName;
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  String _nomeUsuario = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _carregarUsuario();
-  }
-
-  Future<void> _carregarUsuario() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _nomeUsuario = prefs.getString('nomeUsuario') ?? 'Usuário Desconhecido';
-    });
-  }
-
-  Future<void> _logout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('logado', false);
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,7 +36,7 @@ class _HomePageState extends State<HomePage> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                 child: Text(
-                  'Bem-vindo, $_nomeUsuario!',
+                  'Bem-vindo, ${widget.userName}!',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -91,6 +68,14 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+    );
+  }
+
+  void _logout(BuildContext context) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+      (route) => false,
     );
   }
 

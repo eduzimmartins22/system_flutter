@@ -73,7 +73,7 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
 
     if (confirmado == true) {
       final sucesso = await _controller.removerCliente(cliente.id);
-      if (sucesso && mounted) {
+      if (sucesso) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cliente excluído com sucesso')),
         );

@@ -74,7 +74,7 @@ class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
           sucesso = await _controller.atualizarUsuario(novoUsuario);
         }
 
-        if (sucesso && mounted) {
+        if (sucesso) {
           Navigator.pop(context, true);
         }
       } catch (e) {
@@ -182,7 +182,7 @@ class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
                         ),
                       );
 
-                      if (confirmado == true && mounted) {
+                      if (confirmado == true) {
                         final sucesso = await _controller.removerUsuario(_id);
                         if (sucesso) {
                           Navigator.pop(context, true);

@@ -5,7 +5,7 @@ class Cliente {
   final String cpfCnpj;
   final String? email;
   final int? numero;
-  final int? cep;
+  final String? cep;
   final String? endereco;
   final String? bairro;
   final String? cidade;
@@ -40,7 +40,7 @@ class Cliente {
     String? cpfCnpj,
     String? email,
     int? numero,
-    int? cep,
+    String? cep,
     String? endereco,
     String? bairro,
     String? cidade,
@@ -85,7 +85,7 @@ class Cliente {
       cpfCnpj: json['cpfCnpj'] as String,
       email: json['email'] as String?,
       numero: json['numero'] as int?,
-      cep: json['cep'] as int?,
+      cep: json['cep'] as String?,
       endereco: json['endereco'] as String?,
       bairro: json['bairro'] as String?,
       cidade: json['cidade'] as String?,

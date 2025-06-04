@@ -31,7 +31,7 @@ class DatabaseHelper {
 
   Future<void> _onCreateDB(Database db, version) async {
     await _createTables(db);
-    await _insertInitialData(db);
+    //await _insertInitialData(db);
   }
 
   Future<void> _createTables(Database db) async {
@@ -85,6 +85,42 @@ class DatabaseHelper {
         )
       )
     ''');
+
+    //pedido
+    await db.execute('''
+      CREATE TABLE pedidos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        idCliente INTEGER NOT NULL,
+        idUsuario INTEGER NOT NULL,
+        totalPedido REAL NOT NULL,
+        dataCriacao TEXT NOT NULL,
+        FOREIGN KEY (idCliente) REFERENCES clientes(id),
+        FOREIGN KEY (idUsuario) REFERENCES usuarios(id)
+      )
+    ''');
+
+    //pedido_itens
+    await db.execute('''
+      CREATE TABLE pedido_itens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        idPedido INTEGER NOT NULL,
+        idProduto INTEGER NOT NULL,
+        quantidade INTEGER NOT NULL,
+        totalItem REAL NOT NULL,
+        FOREIGN KEY (idPedido) REFERENCES pedidos(id),
+        FOREIGN KEY (idProduto) REFERENCES produtos(id)
+      )
+    ''');
+
+    //pedido_pagamentos
+    await db.execute('''
+      CREATE TABLE pedido_pagamentos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        idPedido INTEGER NOT NULL,
+        valorPagamento REAL NOT NULL,
+        FOREIGN KEY (idPedido) REFERENCES pedidos(id)
+      )
+    ''');
   }
 
 
@@ -94,84 +130,11 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> _insertInitialData(Database db) async {
-    //admin padrão
-    await db.insert('usuarios', {
-      'nome': 'admin',
-      'senha': 'admin',
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
-  }
-
-  // Future<int> insert(String table, Map<String, dynamic> values) async {
-  //   final db = await database;
-  //   return await db.insert(table, values);
-  // }
-
-  // Future<List<Map<String, dynamic>>> query(
-  //   String table, {
-  //   bool? distinct,
-  //   List<String>? columns,
-  //   String? where,
-  //   List<Object?>? whereArgs,
-  //   String? groupBy,
-  //   String? having,
-  //   String? orderBy,
-  //   int? limit,
-  //   int? offset,
-  // }) async {
-  //   final db = await database;
-  //   return await db.query(
-  //     table,
-  //     distinct: distinct,
-  //     columns: columns,
-  //     where: where,
-  //     whereArgs: whereArgs,
-  //     groupBy: groupBy,
-  //     having: having,
-  //     orderBy: orderBy,
-  //     limit: limit,
-  //     offset: offset,
-  //   );
-  // }
-
-  // Future<int> update(
-  //   String table,
-  //   Map<String, dynamic> values, {
-  //   String? where,
-  //   List<Object?>? whereArgs,
-  // }) async {
-  //   final db = await database;
-  //   return await db.update(
-  //     table,
-  //     values,
-  //     where: where,
-  //     whereArgs: whereArgs,
-  //   );
-  // }
-
-  // Future<int> delete(
-  //   String table, {
-  //   String? where,
-  //   List<Object?>? whereArgs,
-  // }) async {
-  //   final db = await database;
-  //   return await db.delete(
-  //     table,
-  //     where: where,
-  //     whereArgs: whereArgs,
-  //   );
-  // }
-
-  // Future<int> count(
-  //   String table, {
-  //   String? where,
-  //   List<Object?>? whereArgs,
-  // }) async {
-  //   final db = await database;
-  //   final result = await db.rawQuery(
-  //     'SELECT COUNT(*) FROM $table${where != null ? ' WHERE $where' : ''}',
-  //     whereArgs,
-  //   );
-  //   return Sqflite.firstIntValue(result) ?? 0;
+  // Future<void> _insertInitialData(Database db) async {
+  //   //admin padrão
+  //   await db.insert('usuarios', {
+  //     'nome': 'admin',
+  //     'senha': 'admin',
+  //   }, conflictAlgorithm: ConflictAlgorithm.ignore);
   // }
 }

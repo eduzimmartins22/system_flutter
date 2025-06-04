@@ -36,7 +36,9 @@ class ProdutoController {
 
   Future<int> adicionarProduto(Produto produto) async {
     final db = await _dbHelper.database;
-    return await db.insert('produtos', produto.toJson());
+    final map = produto.toJson();
+    map.remove('id');
+    return await db.insert('produtos', map);
   }
 
   Future<bool> atualizarProduto(Produto produto) async {
