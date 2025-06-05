@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'pages/login/login.dart';
-import 'pages/home/home.dart';
+import 'database/db_helper.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final dbHelper = DatabaseHelper();
+  await dbHelper.database; // Inicializa o banco de dados
   runApp(const SalesApp());
 }
 
 class SalesApp extends StatelessWidget {
   const SalesApp({super.key});
-
-  Future<bool> _verificarLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('logado') ?? false;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +28,6 @@ class SalesApp extends StatelessWidget {
           backgroundColor: Colors.deepPurple,
           foregroundColor: Colors.white,
         ),
-        
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -40,7 +36,6 @@ class SalesApp extends StatelessWidget {
             ),
           ),
         ),
-        
         cardTheme: CardTheme(
           elevation: 2,
           shape: RoundedRectangleBorder(
@@ -48,7 +43,6 @@ class SalesApp extends StatelessWidget {
           ),
           margin: const EdgeInsets.all(8),
         ),
-        
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
@@ -65,17 +59,7 @@ class SalesApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.light,
-      home: FutureBuilder<bool>(
-        future: _verificarLogin(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          return snapshot.data == true ? const HomePage() : const LoginPage();
-        },
-      ),
+      home: const LoginPage(), // Direciona direto para a tela de login
     );
   }
 }

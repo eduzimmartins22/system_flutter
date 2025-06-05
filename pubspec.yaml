@@ -32,6 +32,8 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.5.3
   path_provider: ^2.1.5
+  sqflite: ^2.4.2
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:

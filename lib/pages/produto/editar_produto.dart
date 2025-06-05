@@ -59,7 +59,7 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
   Future<void> _salvarProduto() async {
     if (_formKey.currentState?.validate() ?? false) {
       final novoProduto = Produto(
-        id: _produto.id,
+        id: widget.produto?.id ?? 0,
         nome: _nomeController.text,
         unidade: _unidadeSelecionada,
         quantidadeEstoque: int.parse(_quantidadeController.text),
@@ -81,7 +81,7 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
         sucesso = await _controller.atualizarProduto(novoProduto);
       }
 
-      if (sucesso && mounted) {
+      if (sucesso) {
         Navigator.pop(context, true);
       }
     }
@@ -222,7 +222,7 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
                         ),
                       );
 
-                      if (confirmado == true && mounted) {
+                      if (confirmado == true) {
                         final sucesso = await _controller.removerProduto(_produto.id);
                         if (sucesso) {
                           Navigator.pop(context, true);

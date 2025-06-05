@@ -1,78 +1,72 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import 'package:sqflite/sqflite.dart';
+
+import '../database/db_helper.dart';
 import '../models/produto_model.dart';
 
 class ProdutoController {
-  static const _produtosKey = 'lista_produtos';
-  List<Produto> _produtos = [];
-
-  Future<void> _carregarLista() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_produtosKey);
-    
-    if (jsonString != null) {
-      try {
-        final jsonList = json.decode(jsonString) as List<dynamic>;
-        _produtos = jsonList.map((json) => Produto.fromJson(json)).toList();
-      } catch (e) {
-        _produtos = [];
-      }
-    } else {
-      _produtos = [];
-    }
-  }
-
-  Future<void> _salvarLista() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = _produtos.map((produto) => produto.toJson()).toList();
-    await prefs.setString(_produtosKey, json.encode(jsonList));
-  }
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<List<Produto>> getProdutos() async {
-    await _carregarLista();
-    return _produtos.toList();
+    final db = await _dbHelper.database;
+    final maps = await db.query('produtos');
+    return maps.map((map) => Produto.fromJson(map)).toList();
+  }
+
+  Future<List<Produto>> buscarProdutosAtivos() async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'produtos',
+      where: 'status = ?',
+      whereArgs: ['ativo'],
+    );
+    return maps.map((map) => Produto.fromJson(map)).toList();
+  }
+
+  Future<Produto?> getProdutoPorId(int id) async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'produtos',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (maps.isNotEmpty) {
+      return Produto.fromJson(maps.first);
+    }
+    return null;
   }
 
   Future<int> adicionarProduto(Produto produto) async {
-    await _carregarLista();
-    
-    if (_produtos.any((p) => p.id == produto.id)) {
-      final novoProduto = produto.copyWith(id: _gerarNovoId());
-      _produtos.add(novoProduto);
-    } else {
-      _produtos.add(produto);
-    }
-    
-    await _salvarLista();
-    return produto.id;
+    final db = await _dbHelper.database;
+    final map = produto.toJson();
+    map.remove('id');
+    return await db.insert('produtos', map);
   }
 
   Future<bool> atualizarProduto(Produto produto) async {
-    await _carregarLista();
-    
-    final index = _produtos.indexWhere((p) => p.id == produto.id);
-    if (index >= 0) {
-      _produtos[index] = produto;
-      await _salvarLista();
-      return true;
-    }
-    return false;
+    final db = await _dbHelper.database;
+    final count = await db.update(
+      'produtos',
+      produto.toJson(),
+      where: 'id = ?',
+      whereArgs: [produto.id],
+    );
+    return count > 0;
   }
 
   Future<bool> removerProduto(int id) async {
-    await _carregarLista();
-    
-    final initialLength = _produtos.length;
-    _produtos.removeWhere((produto) => produto.id == id);
-    final removed = initialLength != _produtos.length;
-    
-    if (removed) {
-      await _salvarLista();
-    }
-    return removed;
+    final db = await _dbHelper.database;
+    final count = await db.delete(
+      'produtos',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return count > 0;
   }
 
-  int _gerarNovoId() {
-    return DateTime.now().millisecondsSinceEpoch;
+  Future<int> contarProdutos() async {
+    final db = await _dbHelper.database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM produtos');
+    return result.first['count'] as int;
   }
 }

@@ -73,7 +73,7 @@ class _CadastroProdutoPageState extends State<CadastroProdutoPage> {
 
     if (confirmado == true) {
       final sucesso = await _controller.removerProduto(produto.id);
-      if (sucesso && mounted) {
+      if (sucesso) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Produto excluído com sucesso')),
         );
