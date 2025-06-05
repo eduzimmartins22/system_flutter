@@ -69,7 +69,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
           cpfCnpj: _cpfCnpjController.text,
           email: _emailController.text.isNotEmpty ? _emailController.text : null,
           numero: _numeroController.text.isNotEmpty ? int.parse(_numeroController.text) : null,
-          cep: _cepController.text.isNotEmpty ? int.parse(_cepController.text) : null,
+          cep: _cepController.text.isNotEmpty ? _cepController.text : null,
           endereco: _enderecoController.text.isNotEmpty ? _enderecoController.text : null,
           bairro: _bairroController.text.isNotEmpty ? _bairroController.text : null,
           cidade: _cidadeController.text.isNotEmpty ? _cidadeController.text : null,
@@ -98,7 +98,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
           sucesso = await _controller.atualizarCliente(novoCliente);
         }
 
-        if (sucesso && mounted) {
+        if (sucesso) {
           Navigator.pop(context, true);
         }
       } catch (e) {
@@ -292,7 +292,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                         ),
                       );
 
-                      if (confirmado == true && mounted) {
+                      if (confirmado == true) {
                         final sucesso = await _controller.removerCliente(_id);
                         if (sucesso) {
                           Navigator.pop(context, true);

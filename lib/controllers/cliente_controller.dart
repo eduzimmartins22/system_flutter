@@ -1,111 +1,107 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import '../database/db_helper.dart';
 import '../models/cliente_model.dart';
 
 class ClienteController {
-  static const _clientesKey = 'lista_clientes';
-  List<Cliente> _clientes = [];
-
-  Future<void> _carregarLista() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_clientesKey);
-    
-    if (jsonString != null) {
-      try {
-        final jsonList = json.decode(jsonString) as List<dynamic>;
-        _clientes = jsonList.map((json) => Cliente.fromJson(json)).toList();
-      } catch (e) {
-        _clientes = [];
-      }
-    } else {
-      _clientes = [];
-    }
-  }
-
-  Future<void> _salvarLista() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = _clientes.map((cliente) => cliente.toJson()).toList();
-    await prefs.setString(_clientesKey, json.encode(jsonList));
-  }
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<List<Cliente>> getClientes() async {
-    await _carregarLista();
-    return _clientes.toList();
+    final db = await _dbHelper.database;
+    final maps = await db.query('clientes');
+    return maps.map((map) => Cliente.fromJson(map)).toList();
   }
 
   Future<int> adicionarCliente(Cliente cliente) async {
-    await _carregarLista();
+    final db = await _dbHelper.database;
     
-    if (_clientes.any((c) => c.cpfCnpj == cliente.cpfCnpj)) {
+    final existe = await documentoExiste(cliente.cpfCnpj);
+    if (existe) {
       throw Exception('Já existe um cliente com este documento');
     }
     
-    if (_clientes.any((c) => c.id == cliente.id)) {
-      final novoCliente = cliente.copyWith(id: _gerarNovoId());
-      _clientes.add(novoCliente);
-    } else {
-      _clientes.add(cliente);
-    }
+    final map = cliente.toJson();
+    map.remove('id');
     
-    await _salvarLista();
-    return cliente.id;
+    return await db.insert('clientes', map);
   }
 
   Future<bool> atualizarCliente(Cliente cliente) async {
-    await _carregarLista();
+    final db = await _dbHelper.database;
     
-    final index = _clientes.indexWhere((c) => c.id == cliente.id);
-    if (index >= 0) {
-      if (_clientes.any((c) => c.id != cliente.id && c.cpfCnpj == cliente.cpfCnpj)) {
-        throw Exception('Já existe um cliente com este documento');
-      }
-      
-      _clientes[index] = cliente;
-      await _salvarLista();
-      return true;
+    final clientesComMesmoDoc = await db.query(
+      'clientes',
+      where: 'cpfCnpj = ? AND id <> ?',
+      whereArgs: [cliente.cpfCnpj, cliente.id],
+    );
+    
+    if (clientesComMesmoDoc.isNotEmpty) {
+      throw Exception('Já existe um cliente com este documento');
     }
-    return false;
+    
+    final count = await db.update(
+      'clientes',
+      cliente.toJson(),
+      where: 'id = ?',
+      whereArgs: [cliente.id],
+    );
+    return count > 0;
   }
 
   Future<bool> removerCliente(int id) async {
-    await _carregarLista();
-    
-    final initialLength = _clientes.length;
-    _clientes.removeWhere((cliente) => cliente.id == id);
-    final removed = initialLength != _clientes.length;
-    
-    if (removed) {
-      await _salvarLista();
-    }
-    return removed;
+    final db = await _dbHelper.database;
+    final count = await db.delete(
+      'clientes',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return count > 0;
   }
 
   Future<Cliente?> buscarPorId(int id) async {
-    await _carregarLista();
-    try {
-      return _clientes.firstWhere((c) => c.id == id);
-    } catch (e) {
-      return null;
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'clientes',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    
+    if (maps.isNotEmpty) {
+      return Cliente.fromJson(maps.first);
     }
+    return null;
   }
 
   Future<Cliente?> buscarPorDocumento(String documento) async {
-    await _carregarLista();
-    try {
-      return _clientes.firstWhere((c) => c.cpfCnpj == documento);
-    } catch (e) {
-      return null;
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'clientes',
+      where: 'cpfCnpj = ?',
+      whereArgs: [documento],
+      limit: 1,
+    );
+    
+    if (maps.isNotEmpty) {
+      return Cliente.fromJson(maps.first);
     }
+    return null;
   }
 
   Future<bool> documentoExiste(String documento, [int? idExcluir]) async {
-    await _carregarLista();
-    return _clientes.any((c) => 
-      (idExcluir == null || c.id != idExcluir) &&
-      c.cpfCnpj == documento);
-  }
-
-  int _gerarNovoId() {
-    return DateTime.now().millisecondsSinceEpoch;
+    final db = await _dbHelper.database;
+    final where = idExcluir != null 
+        ? 'cpfCnpj = ? AND id <> ?' 
+        : 'cpfCnpj = ?';
+    final whereArgs = idExcluir != null 
+        ? [documento, idExcluir] 
+        : [documento];
+    
+    final maps = await db.query(
+      'clientes',
+      where: where,
+      whereArgs: whereArgs,
+      limit: 1,
+    );
+    
+    return maps.isNotEmpty;
   }
 }

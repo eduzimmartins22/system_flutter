@@ -25,7 +25,7 @@ class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
   @override
   void initState() {
     super.initState();
-    _id = widget.usuario?.id ?? DateTime.now().millisecondsSinceEpoch;
+    _id = widget.usuario?.id ?? 0;
     _nome = widget.usuario?.nome ?? '';
     _senha = widget.usuario?.senha ?? '';
 
@@ -74,7 +74,7 @@ class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
           sucesso = await _controller.atualizarUsuario(novoUsuario);
         }
 
-        if (sucesso && mounted) {
+        if (sucesso) {
           Navigator.pop(context, true);
         }
       } catch (e) {
@@ -124,7 +124,7 @@ class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
                   if (value == null || value.isEmpty) {
                     return 'Por favor, insira a senha';
                   }
-                  if (value.length < 6) {
+                  if (value.length < 6 && _id == 0) {
                     return 'A senha deve ter pelo menos 6 caracteres';
                   }
                   return null;
@@ -182,7 +182,7 @@ class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
                         ),
                       );
 
-                      if (confirmado == true && mounted) {
+                      if (confirmado == true) {
                         final sucesso = await _controller.removerUsuario(_id);
                         if (sucesso) {
                           Navigator.pop(context, true);
