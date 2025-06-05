@@ -124,7 +124,7 @@ class _EditarUsuarioPageState extends State<EditarUsuarioPage> {
                   if (value == null || value.isEmpty) {
                     return 'Por favor, insira a senha';
                   }
-                  if (value.length < 6) {
+                  if (value.length < 6 && _id == 0) {
                     return 'A senha deve ter pelo menos 6 caracteres';
                   }
                   return null;

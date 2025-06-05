@@ -10,6 +10,7 @@ class Cliente {
   final String? bairro;
   final String? cidade;
   final String? uf;
+  final DateTime? ultimaAlteracao;
 
   Cliente({
     required this.id,
@@ -23,6 +24,7 @@ class Cliente {
     this.bairro,
     this.cidade,
     this.uf,
+    this.ultimaAlteracao,
   }) {
     if (tipo == TipoCliente.fisica && cpfCnpj.length != 11) {
       throw ArgumentError('CPF deve ter 11 dígitos');
@@ -45,6 +47,7 @@ class Cliente {
     String? bairro,
     String? cidade,
     String? uf,
+    DateTime? ultimaAlteracao,
   }) {
     return Cliente(
       id: id ?? this.id,
@@ -58,6 +61,7 @@ class Cliente {
       bairro: bairro ?? this.bairro,
       cidade: cidade ?? this.cidade,
       uf: uf ?? this.uf,
+      ultimaAlteracao: ultimaAlteracao ?? this.ultimaAlteracao,
     );
   }
 
@@ -74,6 +78,7 @@ class Cliente {
       'bairro': bairro,
       'cidade': cidade,
       'uf': uf,
+      'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
     }..removeWhere((key, value) => value == null);
   }
 
@@ -90,6 +95,9 @@ class Cliente {
       bairro: json['bairro'] as String?,
       cidade: json['cidade'] as String?,
       uf: json['uf'] as String?,
+      ultimaAlteracao: json['ultimaAlteracao'] != null
+          ? DateTime.parse(json['ultimaAlteracao'] as String)
+          : null,
     );
   }
 

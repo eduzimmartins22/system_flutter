@@ -23,13 +23,13 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // Verifica o usuário admin padrão
-      if (username == 'admin' && password == 'admin') {
+      /* if (username == 'admin' && password == 'admin') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomePage(userName: 'admin')),
         );
         return;
-      }
+      } */
 
       final usuario = await _usuarioController.buscarPorNomeESenha(username, password);
       

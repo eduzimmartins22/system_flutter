@@ -1,3 +1,5 @@
+import 'package:sqflite/sqflite.dart';
+
 import '../database/db_helper.dart';
 import '../models/produto_model.dart';
 

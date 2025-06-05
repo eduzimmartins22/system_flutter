@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../produto/cadastro_produto.dart';
 import '../usuario/cadastro_usuario.dart';
 import '../cliente/cadastro_cliente.dart';
+import '../pedido/cadastro_pedido.dart';
 import '../login/login.dart';
 
 class HomePage extends StatefulWidget {
@@ -60,9 +61,16 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               _buildMenuCard(
                 context,
-                icon: Icons.shopping_bag,
+                icon: Icons.storefront_rounded,
                 title: 'Produtos',
                 destination: const CadastroProdutoPage(),
+              ),
+              const SizedBox(height: 16),
+              _buildMenuCard(
+                context,
+                icon: Icons.shopping_basket_rounded,
+                title: 'Pedidos',
+                destination: const CadastroPedidoPage(),
               ),
             ],
           ),
