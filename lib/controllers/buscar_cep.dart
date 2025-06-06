@@ -3,9 +3,13 @@ import 'package:http/http.dart' as http;
 
 class ViaCepService {
   Future<Map<String, dynamic>> consultarCep(String cep) async {
+    if (!RegExp(r'^\d{8}$').hasMatch(cep)) {
+      throw Exception('Formato de CEP inválido.');
+    }
+
     final url = Uri.parse('https://viacep.com.br/ws/$cep/json/');
 
-    final response = await http.get(url);
+    final response = await http.get(url).timeout(Duration(seconds: 10));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

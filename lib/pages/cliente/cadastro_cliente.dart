@@ -13,7 +13,6 @@ class CadastroClientePage extends StatefulWidget {
 class _CadastroClientePageState extends State<CadastroClientePage> {
   final ClienteController _controller = ClienteController();
   late Future<List<Cliente>> _futureClientes;
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -66,7 +65,6 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Excluir'),
           ),
         ],
@@ -74,53 +72,22 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
     );
 
     if (confirmado == true) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        final sucesso = await _controller.removerCliente(cliente.id!);
-        if (sucesso && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cliente excluído com sucesso'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          _carregarClientes();
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro ao excluir cliente: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
+      final sucesso = await _controller.removerCliente(cliente.id);
+      if (sucesso) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cliente excluído com sucesso')),
+        );
+        _carregarClientes();
       }
     }
   }
 
-  // Método para atualizar a lista após mudanças
-  Future<void> _atualizarLista() async {
-    setState(() {
-      _futureClientes = _controller.getClientes();
-    });
-  }
-
   Widget _buildClienteCard(BuildContext context, Cliente cliente) {
-    // Determinar se é pessoa física ou jurídica baseado no CPF/CNPJ
-    final bool isPessoaFisica = cliente.cpfCnpj.length == 11;
+    final bool isPessoaFisica = cliente.tipo.descricao.toLowerCase().contains('física');
     final Color badgeColor = isPessoaFisica
         ? Colors.green.withOpacity(0.1)
         : Colors.orange.withOpacity(0.1);
     final Color badgeTextColor = isPessoaFisica ? Colors.green : Colors.orange;
-    final String tipoDescricao = isPessoaFisica ? 'Pessoa Física' : 'Pessoa Jurídica';
 
     return Card(
       elevation: 4,
@@ -144,7 +111,7 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isPessoaFisica ? Icons.person : Icons.business,
+                      Icons.person,
                       color: Theme.of(context).primaryColor,
                       size: 28,
                     ),
@@ -164,29 +131,9 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _formatarDocumento(cliente.cpfCnpj),
+                          cliente.cpfCnpjFormatado,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        if (cliente.email.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            cliente.email,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        if (cliente.telefone != null && cliente.telefone!.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            cliente.telefone!,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -197,7 +144,7 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
                         icon: const Icon(Icons.delete),
                         color: Colors.red,
                         iconSize: 24,
-                        onPressed: _isLoading ? null : () => _confirmarExclusao(cliente),
+                        onPressed: () => _confirmarExclusao(cliente),
                       ),
                     ],
                   ),
@@ -205,8 +152,8 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
               ),
             ),
             Positioned(
-              top: 8,
-              left: 8,
+              top: 0,
+              left: 0,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -214,7 +161,7 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  tipoDescricao,
+                  cliente.tipo.descricao,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: badgeTextColor,
                         fontWeight: FontWeight.w600,
@@ -222,42 +169,10 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
                 ),
               ),
             ),
-            // Indicador de status ativo/inativo
-            if (!cliente.ativo)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Inativo',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.red,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
     );
-  }
-
-  // Formatar CPF/CNPJ para exibição
-  String _formatarDocumento(String documento) {
-    if (documento.length == 11) {
-      // CPF: 000.000.000-00
-      return '${documento.substring(0, 3)}.${documento.substring(3, 6)}.${documento.substring(6, 9)}-${documento.substring(9)}';
-    } else if (documento.length == 14) {
-      // CNPJ: 00.000.000/0000-00
-      return '${documento.substring(0, 2)}.${documento.substring(2, 5)}.${documento.substring(5, 8)}/${documento.substring(8, 12)}-${documento.substring(12)}';
-    }
-    return documento;
   }
 
   @override
@@ -265,107 +180,36 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Clientes Cadastrados'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _atualizarLista,
-            tooltip: 'Atualizar lista',
-          ),
-        ],
       ),
-      body: Stack(
-        children: [
-          FutureBuilder<List<Cliente>>(
-            future: _futureClientes,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+      body: FutureBuilder<List<Cliente>>(
+        future: _futureClientes,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-              if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.red[300],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Erro ao carregar clientes',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        snapshot.error.toString(),
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _atualizarLista,
-                        child: const Text('Tentar novamente'),
-                      ),
-                    ],
-                  ),
-                );
-              }
+          if (snapshot.hasError) {
+            return Center(child: Text('Erro: ${snapshot.error}'));
+          }
 
-              final clientes = snapshot.data ?? [];
+          final clientes = snapshot.data ?? [];
 
-              if (clientes.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Nenhum cliente cadastrado',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Adicione seu primeiro cliente usando o botão abaixo',
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              }
+          if (clientes.isEmpty) {
+            return const Center(child: Text('Nenhum cliente cadastrado'));
+          }
 
-              return RefreshIndicator(
-                onRefresh: _atualizarLista,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  itemCount: clientes.length,
-                  itemBuilder: (context, index) {
-                    final cliente = clientes[index];
-                    return _buildClienteCard(context, cliente);
-                  },
-                ),
-              );
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            itemCount: clientes.length,
+            itemBuilder: (context, index) {
+              final cliente = clientes[index];
+              return _buildClienteCard(context, cliente);
             },
-          ),
-          // Overlay de loading durante exclusão
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),
-        ],
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isLoading ? null : _adicionarCliente,
+        onPressed: _adicionarCliente,
         icon: const Icon(Icons.add),
         label: const Text("Novo Cliente"),
       ),

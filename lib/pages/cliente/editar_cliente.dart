@@ -2,15 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/cliente_model.dart';
 import '../../controllers/cliente_controller.dart';
 
-// Enum para controlar o tipo de cliente na interface
-enum TipoCliente {
-  fisica('Pessoa Física'),
-  juridica('Pessoa Jurídica');
-
-  const TipoCliente(this.descricao);
-  final String descricao;
-}
-
 class EditarClientePage extends StatefulWidget {
   final Cliente? cliente;
 
@@ -23,11 +14,12 @@ class EditarClientePage extends StatefulWidget {
 class _EditarClientePageState extends State<EditarClientePage> {
   final _formKey = GlobalKey<FormState>();
   final _controller = ClienteController();
+  late int _id;
   late TipoCliente _tipoSelecionado;
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _cpfCnpjController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _telefoneController = TextEditingController();
+  final TextEditingController _numeroController = TextEditingController();
   final TextEditingController _cepController = TextEditingController();
   final TextEditingController _enderecoController = TextEditingController();
   final TextEditingController _bairroController = TextEditingController();
@@ -37,24 +29,19 @@ class _EditarClientePageState extends State<EditarClientePage> {
   @override
   void initState() {
     super.initState();
+    _id = widget.cliente?.id ?? DateTime.now().millisecondsSinceEpoch;
+    _tipoSelecionado = widget.cliente?.tipo ?? TipoCliente.fisica;
     
-    // Determina o tipo baseado no CPF/CNPJ ou usa padrão
     if (widget.cliente != null) {
-      final cpfCnpjLimpo = widget.cliente!.cpfCnpj.replaceAll(RegExp(r'[^0-9]'), '');
-      _tipoSelecionado = cpfCnpjLimpo.length == 11 ? TipoCliente.fisica : TipoCliente.juridica;
-      
-      // Preenche os campos com os dados do cliente
       _nomeController.text = widget.cliente!.nome;
       _cpfCnpjController.text = widget.cliente!.cpfCnpj;
-      _emailController.text = widget.cliente!.email;
-      _telefoneController.text = widget.cliente!.telefone ?? '';
-      _cepController.text = widget.cliente!.cep ?? '';
+      _emailController.text = widget.cliente!.email ?? '';
+      _numeroController.text = widget.cliente!.numero?.toString() ?? '';
+      _cepController.text = widget.cliente!.cep?.toString() ?? '';
       _enderecoController.text = widget.cliente!.endereco ?? '';
       _bairroController.text = widget.cliente!.bairro ?? '';
       _cidadeController.text = widget.cliente!.cidade ?? '';
       _ufController.text = widget.cliente!.uf ?? '';
-    } else {
-      _tipoSelecionado = TipoCliente.fisica;
     }
   }
 
@@ -63,7 +50,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
     _nomeController.dispose();
     _cpfCnpjController.dispose();
     _emailController.dispose();
-    _telefoneController.dispose();
+    _numeroController.dispose();
     _cepController.dispose();
     _enderecoController.dispose();
     _bairroController.dispose();
@@ -76,113 +63,50 @@ class _EditarClientePageState extends State<EditarClientePage> {
     if (_formKey.currentState?.validate() ?? false) {
       try {
         final novoCliente = Cliente(
-          id: widget.cliente?.id, // Mantém o ID se for edição
-          nome: _nomeController.text.trim(),
-          email: _emailController.text.trim(),
-          cpfCnpj: _cpfCnpjController.text.replaceAll(RegExp(r'[^0-9]'), ''),
-          telefone: _telefoneController.text.trim().isNotEmpty ? _telefoneController.text.trim() : null,
-          cep: _cepController.text.trim().isNotEmpty ? _cepController.text.trim() : null,
-          endereco: _enderecoController.text.trim().isNotEmpty ? _enderecoController.text.trim() : null,
-          bairro: _bairroController.text.trim().isNotEmpty ? _bairroController.text.trim() : null,
-          cidade: _cidadeController.text.trim().isNotEmpty ? _cidadeController.text.trim() : null,
-          uf: _ufController.text.trim().toUpperCase().isNotEmpty ? _ufController.text.trim().toUpperCase() : null,
-          dataCadastro: widget.cliente?.dataCadastro ?? DateTime.now(),
-          ativo: widget.cliente?.ativo ?? true,
+          id: _id,
+          nome: _nomeController.text,
+          tipo: _tipoSelecionado,
+          cpfCnpj: _cpfCnpjController.text,
+          email: _emailController.text.isNotEmpty ? _emailController.text : null,
+          numero: _numeroController.text.isNotEmpty ? int.parse(_numeroController.text) : null,
+          cep: _cepController.text.isNotEmpty ? _cepController.text : null,
+          endereco: _enderecoController.text.isNotEmpty ? _enderecoController.text : null,
+          bairro: _bairroController.text.isNotEmpty ? _bairroController.text : null,
+          cidade: _cidadeController.text.isNotEmpty ? _cidadeController.text : null,
+          uf: _ufController.text.isNotEmpty ? _ufController.text : null,
         );
 
-        bool sucesso = false;
+        bool sucesso;
         if (widget.cliente == null) {
-          // Novo cliente
           if (await _controller.documentoExiste(novoCliente.cpfCnpj)) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Já existe um cliente com este documento!'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Já existe um cliente com este documento!')),
+            );
             return;
           }
           
-          sucesso = (await _controller.adicionarCliente(novoCliente)) as bool;
+          await _controller.adicionarCliente(novoCliente);
+          sucesso = true;
         } else {
-          // Edição de cliente existente
           if (await _controller.documentoExiste(novoCliente.cpfCnpj, novoCliente.id)) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Já existe um cliente com este documento!'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Já existe um cliente com este documento!')),
+            );
             return;
           }
           
-          sucesso =  (await _controller.adicionarCliente(novoCliente))as bool;
+          sucesso = await _controller.atualizarCliente(novoCliente);
         }
 
-        if (sucesso && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(widget.cliente == null ? 'Cliente adicionado com sucesso!' : 'Cliente atualizado com sucesso!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+        if (sucesso) {
           Navigator.pop(context, true);
-        } else if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erro ao salvar cliente'),
-              backgroundColor: Colors.red,
-            ),
-          );
         }
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro ao salvar cliente: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
       }
     }
-  }
-
-  String? _validarEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'E-mail é obrigatório';
-    }
-    
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value.trim())) {
-      return 'E-mail inválido';
-    }
-    return null;
-  }
-
-  String? _validarUF(String? value) {
-    if (value == null || value.isEmpty) return null;
-    
-    if (value.length != 2) {
-      return 'UF deve ter 2 caracteres';
-    }
-    return null;
-  }
-
-  String? _validarTelefone(String? value) {
-    if (value == null || value.isEmpty) return null;
-    
-    final telefoneRegex = RegExp(r'^[0-9]{10,11}$');
-    final apenasNumeros = value.replaceAll(RegExp(r'[^0-9]'), '');
-    
-    if (!telefoneRegex.hasMatch(apenasNumeros)) {
-      return 'Telefone deve ter 10 ou 11 dígitos';
-    }
-    return null;
   }
 
   @override
@@ -211,8 +135,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
                   if (value != null) {
                     setState(() {
                       _tipoSelecionado = value;
-                      // Limpa o campo CPF/CNPJ quando muda o tipo
-                      _cpfCnpjController.clear();
                     });
                   }
                 },
@@ -229,11 +151,8 @@ class _EditarClientePageState extends State<EditarClientePage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  if (value == null || value.isEmpty) {
                     return 'Por favor, insira o nome';
-                  }
-                  if (value.trim().length < 2) {
-                    return 'Nome deve ter pelo menos 2 caracteres';
                   }
                   return null;
                 },
@@ -244,21 +163,16 @@ class _EditarClientePageState extends State<EditarClientePage> {
                 decoration: InputDecoration(
                   labelText: _tipoSelecionado == TipoCliente.fisica ? 'CPF *' : 'CNPJ *',
                   border: const OutlineInputBorder(),
-                  hintText: _tipoSelecionado == TipoCliente.fisica ? '000.000.000-00' : '00.000.000/0000-00',
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor, insira o documento';
                   }
-                  
-                  // Remove espaços e caracteres especiais
-                  final cleanValue = value.replaceAll(RegExp(r'[^0-9]'), '');
-                  
-                  if (_tipoSelecionado == TipoCliente.fisica && cleanValue.length != 11) {
+                  if (_tipoSelecionado == TipoCliente.fisica && value.length != 11) {
                     return 'CPF deve ter 11 dígitos';
                   }
-                  if (_tipoSelecionado == TipoCliente.juridica && cleanValue.length != 14) {
+                  if (_tipoSelecionado == TipoCliente.juridica && value.length != 14) {
                     return 'CNPJ deve ter 14 dígitos';
                   }
                   return null;
@@ -268,22 +182,10 @@ class _EditarClientePageState extends State<EditarClientePage> {
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
-                  labelText: 'E-mail *',
+                  labelText: 'E-mail',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
-                validator: _validarEmail,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _telefoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Telefone',
-                  border: OutlineInputBorder(),
-                  hintText: '(27) 99999-9999',
-                ),
-                keyboardType: TextInputType.phone,
-                validator: _validarTelefone,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -297,38 +199,37 @@ class _EditarClientePageState extends State<EditarClientePage> {
               Row(
                 children: [
                   Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: _numeroController,
+                      decoration: const InputDecoration(
+                        labelText: 'Número',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
                     flex: 4,
                     child: TextFormField(
                       controller: _cepController,
                       decoration: const InputDecoration(
                         labelText: 'CEP',
                         border: OutlineInputBorder(),
-                        hintText: '00000-000',
                       ),
                       keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value != null && value.isNotEmpty) {
-                          final cleanValue = value.replaceAll(RegExp(r'[^0-9]'), '');
-                          if (cleanValue.length != 8) {
-                            return 'CEP deve ter 8 dígitos';
-                          }
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: _bairroController,
-                      decoration: const InputDecoration(
-                        labelText: 'Bairro',
-                        border: OutlineInputBorder(),
-                      ),
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _bairroController,
+                decoration: const InputDecoration(
+                  labelText: 'Bairro',
+                  border: OutlineInputBorder(),
+                ),
               ),
               const SizedBox(height: 16),
               Row(
@@ -351,11 +252,8 @@ class _EditarClientePageState extends State<EditarClientePage> {
                       decoration: const InputDecoration(
                         labelText: 'UF',
                         border: OutlineInputBorder(),
-                        hintText: 'ES',
                       ),
                       maxLength: 2,
-                      textCapitalization: TextCapitalization.characters,
-                      validator: _validarUF,
                     ),
                   ),
                 ],
@@ -366,10 +264,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: _salvarCliente,
-                  child: Text(
-                    isEdicao ? 'Atualizar Cliente' : 'Salvar Cliente',
-                    style: const TextStyle(fontSize: 16),
-                  ),
+                  child: const Text('Salvar', style: TextStyle(fontSize: 16)),
                 ),
               ),
               if (isEdicao) ...[
@@ -383,7 +278,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Confirmar Exclusão'),
-                          content: Text('Deseja realmente excluir o cliente "${widget.cliente!.nome}"?'),
+                          content: const Text('Deseja realmente excluir este cliente?'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
@@ -391,43 +286,16 @@ class _EditarClientePageState extends State<EditarClientePage> {
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.red,
-                              ),
                               child: const Text('Excluir'),
                             ),
                           ],
                         ),
                       );
 
-                      if (confirmado == true && mounted) {
-                        try {
-                          final sucesso = await _controller.removerCliente(widget.cliente!.id!);
-                          if (sucesso && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Cliente excluído com sucesso!'),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                            Navigator.pop(context, true);
-                          } else if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Erro ao excluir cliente'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Erro ao excluir cliente: ${e.toString()}'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
+                      if (confirmado == true) {
+                        final sucesso = await _controller.removerCliente(_id);
+                        if (sucesso) {
+                          Navigator.pop(context, true);
                         }
                       }
                     },
