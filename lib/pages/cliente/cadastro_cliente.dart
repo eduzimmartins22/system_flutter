@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../models/cliente_model.dart';
-import '../../controllers/cliente_controller.dart';
-import 'editar_cliente.dart';
+import 'package:flutter/services.dart';
+import 'package:sistem_flutter/controllers/cliente_controller.dart';
+import 'package:sistem_flutter/models/cliente_model.dart'; // Adicione se não tiver
 
+// === CadastroClientePage ===
 class CadastroClientePage extends StatefulWidget {
   const CadastroClientePage({super.key});
 
@@ -20,199 +21,256 @@ class _CadastroClientePageState extends State<CadastroClientePage> {
     _carregarClientes();
   }
 
-  void _carregarClientes() {
+void _carregarClientes() {
     setState(() {
       _futureClientes = _controller.getClientes();
     });
   }
 
-  void _editarCliente(Cliente cliente) async {
-    final resultado = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditarClientePage(cliente: cliente),
-      ),
-    );
-
-    if (resultado == true) {
-      _carregarClientes();
-    }
-  }
-
-  void _adicionarCliente() async {
-    final resultado = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const EditarClientePage(),
-      ),
-    );
-
-    if (resultado == true) {
-      _carregarClientes();
-    }
-  }
-
-  Future<void> _confirmarExclusao(Cliente cliente) async {
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar Exclusão'),
-        content: Text('Deseja realmente excluir o cliente ${cliente.nome}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmado == true) {
-      final sucesso = await _controller.removerCliente(cliente.id);
-      if (sucesso) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cliente excluído com sucesso')),
-        );
-        _carregarClientes();
-      }
-    }
-  }
-
-  Widget _buildClienteCard(BuildContext context, Cliente cliente) {
-    final bool isPessoaFisica = cliente.tipo.descricao.toLowerCase().contains('física');
-    final Color badgeColor = isPessoaFisica
-        ? Colors.green.withOpacity(0.1)
-        : Colors.orange.withOpacity(0.1);
-    final Color badgeTextColor = isPessoaFisica ? Colors.green : Colors.orange;
-
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _editarCliente(cliente),
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.person,
-                      color: Theme.of(context).primaryColor,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          cliente.nome,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          cliente.cpfCnpjFormatado,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        color: Colors.red,
-                        iconSize: 24,
-                        onPressed: () => _confirmarExclusao(cliente),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  cliente.tipo.descricao,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: badgeTextColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Clientes Cadastrados'),
-      ),
+      appBar: AppBar(title: const Text('Cadastro de Cliente')),
       body: FutureBuilder<List<Cliente>>(
         future: _futureClientes,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
+          } else if (snapshot.hasError) {
             return Center(child: Text('Erro: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Nenhum cliente cadastrado.'));
           }
 
-          final clientes = snapshot.data ?? [];
-
-          if (clientes.isEmpty) {
-            return const Center(child: Text('Nenhum cliente cadastrado'));
-          }
-
+          final clientes = snapshot.data!;
           return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 12),
             itemCount: clientes.length,
             itemBuilder: (context, index) {
               final cliente = clientes[index];
-              return _buildClienteCard(context, cliente);
+              return ListTile(
+                title: Text(cliente.nome),
+                subtitle: Text(cliente.email ?? ''),
+              );
             },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _adicionarCliente,
-        icon: const Icon(Icons.add),
-        label: const Text("Novo Cliente"),
-      ),
+    );
+  }
+}
+
+// === BuscaCepWidget ===
+class BuscaCepWidget extends StatefulWidget {
+  final TextEditingController cepController;
+  final TextEditingController enderecoController;
+  final TextEditingController bairroController;
+  final TextEditingController cidadeController;
+  final TextEditingController ufController;
+  final String? labelText;
+  final String? hintText;
+
+  const BuscaCepWidget({
+    Key? key,
+    required this.cepController,
+    required this.enderecoController,
+    required this.bairroController,
+    required this.cidadeController,
+    required this.ufController,
+    this.labelText = 'CEP',
+    this.hintText = '00000-000',
+  }) : super(key: key);
+
+  @override
+  State<BuscaCepWidget> createState() => _BuscaCepWidgetState();
+}
+
+class _BuscaCepWidgetState extends State<BuscaCepWidget> {
+  final ClienteController _controller = ClienteController();
+  bool _carregando = false;
+
+  Future<void> _buscarCep() async {
+    final cep = widget.cepController.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (cep.length != 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('CEP deve ter 8 dígitos'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _carregando = true;
+    });
+
+    try {
+      final endereco = await _controller.buscarEnderecoPorCep(cep);
+
+      widget.enderecoController.text = endereco['logradouro'] ?? '';
+      widget.bairroController.text = endereco['bairro'] ?? '';
+      widget.cidadeController.text = endereco['cidade'] ?? '';
+      widget.ufController.text = endereco['uf'] ?? '';
+      widget.cepController.text = endereco['cep'] ?? cep;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Endereço preenchido automaticamente!'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Erro ao buscar CEP: $e')),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      setState(() {
+        _carregando = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: TextFormField(
+            controller: widget.cepController,
+            decoration: InputDecoration(
+              labelText: widget.labelText,
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.location_on),
+              hintText: widget.hintText,
+            ),
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(8),
+            ],
+            onFieldSubmitted: (_) => _buscarCep(),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          height: 56,
+          child: ElevatedButton.icon(
+            onPressed: _carregando ? null : _buscarCep,
+            icon: _carregando
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.search, size: 20),
+            label: Text(
+              _carregando ? 'Buscando...' : 'Buscar',
+              style: const TextStyle(fontSize: 12),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// === BuscaCepIconWidget ===
+class BuscaCepIconWidget extends StatefulWidget {
+  final TextEditingController cepController;
+  final Function(Map<String, String>) onEnderecoEncontrado;
+  final VoidCallback? onError;
+
+  const BuscaCepIconWidget({
+    Key? key,
+    required this.cepController,
+    required this.onEnderecoEncontrado,
+    this.onError,
+  }) : super(key: key);
+
+  @override
+  State<BuscaCepIconWidget> createState() => _BuscaCepIconWidgetState();
+}
+
+class _BuscaCepIconWidgetState extends State<BuscaCepIconWidget> {
+  final ClienteController _controller = ClienteController();
+  bool _carregando = false;
+
+  Future<void> _buscarCep() async {
+    final cep = widget.cepController.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (cep.length != 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('CEP deve ter 8 dígitos'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _carregando = true;
+    });
+
+    try {
+      final endereco = await _controller.buscarEnderecoPorCep(cep);
+      widget.onEnderecoEncontrado(endereco);
+    } catch (e) {
+      widget.onError?.call();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao buscar CEP: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _carregando = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: _carregando ? null : _buscarCep,
+      icon: _carregando
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.search),
+      tooltip: 'Buscar endereço pelo CEP',
     );
   }
 }
