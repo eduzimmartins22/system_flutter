@@ -7,6 +7,7 @@ class Produto {
   final StatusProduto status;
   final double? precoCusto;
   final String? codigoBarras;
+  final DateTime? ultimaAlteracao;
 
   Produto({
     required this.id,
@@ -17,6 +18,7 @@ class Produto {
     required this.status,
     this.precoCusto,
     this.codigoBarras,
+    this.ultimaAlteracao,
   });
 
   Produto copyWith({
@@ -28,6 +30,7 @@ class Produto {
     StatusProduto? status,
     double? precoCusto,
     String? codigoBarras,
+    DateTime? ultimaAlteracao,
   }) {
     return Produto(
       id: id ?? this.id,
@@ -38,6 +41,7 @@ class Produto {
       status: status ?? this.status,
       precoCusto: precoCusto ?? this.precoCusto,
       codigoBarras: codigoBarras ?? this.codigoBarras,
+      ultimaAlteracao: ultimaAlteracao ?? this.ultimaAlteracao,
     );
   }
 
@@ -51,6 +55,7 @@ class Produto {
       'status': status.name,
       'precoCusto': precoCusto,
       'codigoBarras': codigoBarras,
+      'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
     }..removeWhere((key, value) => value == null);
   }
 
@@ -64,6 +69,9 @@ class Produto {
       status: StatusProduto.values.byName(json['status'] as String),
       precoCusto: json['precoCusto'] as double?,
       codigoBarras: json['codigoBarras'] as String?,
+      ultimaAlteracao: json['ultimaAlteracao'] != null
+          ? DateTime.parse(json['ultimaAlteracao'] as String)
+          : null,
     );
   }
 

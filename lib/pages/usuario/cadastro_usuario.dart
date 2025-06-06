@@ -71,7 +71,7 @@ class _CadastroUsuarioPageState extends State<CadastroUsuarioPage> {
 
     if (confirmado == true) {
       final sucesso = await _controller.removerUsuario(usuario.id);
-      if (sucesso && mounted) {
+      if (sucesso) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Usuário excluído com sucesso')),
         );
