@@ -40,7 +40,7 @@ class _CadastroPedidoPageState extends State<CadastroPedidoPage> {
     return Pedido(
       id: 0,
       idCliente: 0,
-      idUsuario: 1,
+      idUsuario: 0,
       totalPedido: 0,
       dataCriacao: DateTime.now(),
       itens: [],
@@ -117,6 +117,13 @@ class _CadastroPedidoPageState extends State<CadastroPedidoPage> {
 
   Future<void> _salvarPedido() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_pedido.idUsuario <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione um usuário antes de salvar!')),
+      );
+      return;
+    }
     
     final isValid = await _controller.validarPedido(_pedido);
     if (!isValid) {

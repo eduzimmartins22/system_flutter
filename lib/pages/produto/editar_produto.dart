@@ -22,7 +22,7 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
   final TextEditingController _precoCustoController = TextEditingController();
   final TextEditingController _codigoBarrasController = TextEditingController();
 
-  UnidadeProduto _unidadeSelecionada = UnidadeProduto.un;
+  UnidadeProduto _unidadeSelecionada = UnidadeProduto.Un;
   StatusProduto _statusSelecionado = StatusProduto.ativo;
 
   @override
@@ -31,17 +31,17 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
     _produto = widget.produto ?? Produto(
       id: 0,
       nome: '',
-      unidade: UnidadeProduto.un,
-      quantidadeEstoque: 0,
+      unidade: UnidadeProduto.Un,
+      qtdEstoque: 0,
       precoVenda: 0,
       status: StatusProduto.ativo,
     );
 
     _nomeController.text = _produto.nome;
-    _quantidadeController.text = _produto.quantidadeEstoque.toString();
+    _quantidadeController.text = _produto.qtdEstoque.toString();
     _precoVendaController.text = _produto.precoVenda.toString();
-    _precoCustoController.text = _produto.precoCusto?.toString() ?? '';
-    _codigoBarrasController.text = _produto.codigoBarras ?? '';
+    _precoCustoController.text = _produto.custo?.toString() ?? '';
+    _codigoBarrasController.text = _produto.codigoBarra ?? '';
     _unidadeSelecionada = _produto.unidade;
     _statusSelecionado = _produto.status;
   }
@@ -62,13 +62,13 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
         id: widget.produto?.id ?? 0,
         nome: _nomeController.text,
         unidade: _unidadeSelecionada,
-        quantidadeEstoque: int.parse(_quantidadeController.text),
+        qtdEstoque: double.parse(_quantidadeController.text),
         precoVenda: double.parse(_precoVendaController.text),
         status: _statusSelecionado,
-        precoCusto: _precoCustoController.text.isNotEmpty 
+        custo: _precoCustoController.text.isNotEmpty 
             ? double.parse(_precoCustoController.text) 
             : null,
-        codigoBarras: _codigoBarrasController.text.isNotEmpty
+        codigoBarra: _codigoBarrasController.text.isNotEmpty
             ? _codigoBarrasController.text
             : null,
       );
@@ -138,7 +138,7 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
                   if (value == null || value.isEmpty) {
                     return 'Por favor, insira a quantidade';
                   }
-                  if (int.tryParse(value) == null) {
+                  if (double.tryParse(value) == null) {
                     return 'Por favor, insira um número válido';
                   }
                   return null;
