@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import '../configuracao/configuracao.dart';
 import '../produto/cadastro_produto.dart';
 import '../usuario/cadastro_usuario.dart';
 import '../cliente/cadastro_cliente.dart';
-import '../pedido/cadastro_pedido.dart';
+import '../pedido/lista_pedidos.dart';
 import '../login/login.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.userName});
+  const HomePage({super.key, required this.userName, this.userId});
   
   final String userName;
+  final int? userId;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -66,11 +68,18 @@ class _HomePageState extends State<HomePage> {
                 destination: const CadastroProdutoPage(),
               ),
               const SizedBox(height: 16),
-              _buildMenuCard(
+                _buildMenuCard(
                 context,
                 icon: Icons.shopping_basket_rounded,
                 title: 'Pedidos',
-                destination: const CadastroPedidoPage(),
+                destination: ListaPedidosPage(userId: widget.userId),
+              ),
+              const SizedBox(height: 16),
+                _buildMenuCard(
+                context,
+                icon: Icons.settings,
+                title: 'Configuração',
+                destination: ConfiguracaoPage(),
               ),
             ],
           ),

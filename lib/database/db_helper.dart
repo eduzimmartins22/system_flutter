@@ -69,12 +69,12 @@ class DatabaseHelper {
       CREATE TABLE clientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
-        tipo TEXT NOT NULL CHECK (tipo IN ('fisica', 'juridica')),
+        tipo TEXT NOT NULL CHECK (tipo IN ('F', 'J')),
         cpfCnpj TEXT NOT NULL,
         email TEXT,
         telefone TEXT,
         numero INTEGER,
-        cep TEXT,  -- Alterado para TEXT pois no modelo pode ser null e em alguns casos pode conter hífen
+        cep TEXT,
         endereco TEXT,
         bairro TEXT,
         cidade TEXT,
@@ -82,8 +82,8 @@ class DatabaseHelper {
         ultimaAlteracao TEXT,
         CONSTRAINT cpf_cnpj_unico UNIQUE (cpfCnpj),
         CONSTRAINT cpf_length CHECK (
-          (tipo = 'fisica' AND LENGTH(cpfCnpj) = 11) OR
-          (tipo = 'juridica' AND LENGTH(cpfCnpj) = 14)
+          (tipo = 'F' AND LENGTH(cpfCnpj) = 11) OR
+          (tipo = 'J' AND LENGTH(cpfCnpj) = 14)
         )
       )
     ''');
@@ -136,12 +136,6 @@ class DatabaseHelper {
   }
 
   Future<void> _insertInitialData(Database db) async {
-    //admin padrão
-    await db.insert('usuarios', {
-      'nome': 'admin',
-      'senha': 'admin',
-    });
-
     await db.insert('usuarios', {
       'nome': 'breno',
       'senha': 'brenin',
@@ -206,7 +200,7 @@ class DatabaseHelper {
   // Clientes Pessoa Física
   await db.insert('clientes', {
     'nome': 'Carlos Silva',
-    'tipo': 'fisica',
+    'tipo': 'F',
     'cpfCnpj': '12345678901',
     'email': 'carlos@email.com',
     'telefone': '11999999999',
@@ -220,7 +214,7 @@ class DatabaseHelper {
 
   await db.insert('clientes', {
     'nome': 'Ana Paula',
-    'tipo': 'fisica',
+    'tipo': 'F',
     'cpfCnpj': '98765432100',
     'email': 'ana@email.com',
     'telefone': '11988888888',
@@ -235,7 +229,7 @@ class DatabaseHelper {
   // Clientes Pessoa Jurídica
   await db.insert('clientes', {
     'nome': 'Tech Solutions Ltda',
-    'tipo': 'juridica',
+    'tipo': 'J',
     'cpfCnpj': '11222333000188',
     'email': 'contato@tech.com',
     'telefone': '1133334444',
@@ -249,7 +243,7 @@ class DatabaseHelper {
 
   await db.insert('clientes', {
     'nome': 'Comercial ABC ME',
-    'tipo': 'juridica',
+    'tipo': 'J',
     'cpfCnpj': '99887766000155',
     'email': 'abc@comercial.com',
     'telefone': '1144445555',
