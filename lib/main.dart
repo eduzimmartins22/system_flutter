@@ -59,7 +59,7 @@ class SalesApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.light,
-      home: const LoginPage(), // Direciona direto para a tela de login
+      home: const LoginPage(),
     );
   }
 }

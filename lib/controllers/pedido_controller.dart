@@ -78,6 +78,78 @@ class PedidoController {
     }));
   }
 
+  Future<bool> atualizarPedidoCompleto(Pedido pedido) async {
+    final db = await _dbHelper.database;
+    
+    try {
+      // Primeiro obtém os itens originais para comparar
+      final itensOriginais = (await db.query(
+        'pedido_itens',
+        where: 'idPedido = ?',
+        whereArgs: [pedido.id],
+      )).map((e) => PedidoItem.fromJson(e)).toList();
+
+      // Identifica itens que foram removidos
+      final itensRemovidos = itensOriginais.where(
+        (original) => !pedido.itens.any((novo) => novo.idProduto == original.idProduto)
+      ).toList();
+
+      await db.transaction((txn) async {
+        // Devolve ao estoque os itens removidos
+        for (final item in itensRemovidos) {
+          await _adicionarAoEstoque(txn, item.idProduto, item.quantidade);
+        }
+
+        // Resto da lógica de atualização...
+        await txn.update(
+          'pedidos',
+          {
+            'idCliente': pedido.idCliente,
+            'totalPedido': pedido.totalPedido,
+            'ultimaAlteracao': DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [pedido.id],
+        );
+
+        await txn.delete(
+          'pedido_itens',
+          where: 'idPedido = ?',
+          whereArgs: [pedido.id],
+        );
+
+        for (final item in pedido.itens) {
+          await txn.insert('pedido_itens', {
+            'idPedido': pedido.id,
+            'idProduto': item.idProduto,
+            'quantidade': item.quantidade,
+            'totalItem': item.totalItem,
+            'ultimaAlteracao': DateTime.now().toIso8601String(),
+          });
+
+          await _atualizarEstoqueEmEdicao(txn, item);
+        }
+
+        await txn.delete(
+          'pedido_pagamentos',
+          where: 'idPedido = ?',
+          whereArgs: [pedido.id],
+        );
+
+        for (final pagamento in pedido.pagamentos) {
+          await txn.insert('pedido_pagamentos', {
+            'idPedido': pedido.id,
+            'valorPagamento': pagamento.valor,
+            'ultimaAlteracao': DateTime.now().toIso8601String(),
+          });
+        }
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<bool> validarPedido(Pedido pedido) async {
     if (pedido.itens.isEmpty || pedido.pagamentos.isEmpty) {
       return false;
@@ -129,6 +201,76 @@ class PedidoController {
         'produtos',
         {
           'quantidadeEstoque': novoEstoque,
+          'ultimaAlteracao': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [produtoId],
+      );
+    }
+  }
+
+  Future<void> _atualizarEstoqueEmEdicao(Transaction txn, PedidoItem novoItem) async {
+    final itensOriginais = await txn.query(
+      'pedido_itens',
+      where: 'idPedido = ? AND idProduto = ?',
+      whereArgs: [novoItem.idPedido, novoItem.idProduto],
+    );
+
+    int quantidadeOriginal = 0;
+    if (itensOriginais.isNotEmpty) {
+      quantidadeOriginal = itensOriginais.first['quantidade'] as int;
+    }
+
+    final diferencaQuantidade = quantidadeOriginal - novoItem.quantidade;
+
+    if (diferencaQuantidade != 0) {
+      final produto = await txn.query(
+        'produtos',
+        where: 'id = ?',
+        whereArgs: [novoItem.idProduto],
+        limit: 1,
+      );
+
+      if (produto.isNotEmpty) {
+        final estoqueAtual = produto.first['quantidadeEstoque'] as int;
+        final novoEstoque = estoqueAtual + diferencaQuantidade;
+        
+        await txn.update(
+          'produtos',
+          {
+            'quantidadeEstoque': novoEstoque,
+            'ultimaAlteracao': DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [novoItem.idProduto],
+        );
+      }
+    }
+  }
+
+  Future<void> devolverItensAoEstoque(List<PedidoItem> itensRemovidos) async {
+    final db = await _dbHelper.database;
+    await db.transaction((txn) async {
+      for (final item in itensRemovidos) {
+        await _adicionarAoEstoque(txn, item.idProduto, item.quantidade);
+      }
+    });
+  }
+
+  Future<void> _adicionarAoEstoque(Transaction txn, int produtoId, int quantidade) async {
+    final produto = await txn.query(
+      'produtos',
+      where: 'id = ?',
+      whereArgs: [produtoId],
+      limit: 1,
+    );
+
+    if (produto.isNotEmpty) {
+      final estoqueAtual = produto.first['quantidadeEstoque'] as int;
+      await txn.update(
+        'produtos',
+        {
+          'quantidadeEstoque': estoqueAtual + quantidade,
           'ultimaAlteracao': DateTime.now().toIso8601String(),
         },
         where: 'id = ?',
