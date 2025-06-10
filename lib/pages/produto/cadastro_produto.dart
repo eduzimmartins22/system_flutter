@@ -125,7 +125,7 @@ class _CadastroProdutoPageState extends State<CadastroProdutoPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Estoque: ${produto.quantidadeEstoque} ${produto.unidade.descricao}',
+                          'Estoque: ${produto.qtdEstoque} ${produto.unidade.descricao}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],

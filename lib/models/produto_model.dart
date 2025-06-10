@@ -2,22 +2,22 @@ class Produto {
   final int id;
   final String nome;
   final UnidadeProduto unidade;
-  final int quantidadeEstoque;
+  final double qtdEstoque;
   final double precoVenda;
   final StatusProduto status;
-  final double? precoCusto;
-  final String? codigoBarras;
+  final double? custo;
+  final String? codigoBarra;
   final DateTime? ultimaAlteracao;
 
   Produto({
     required this.id,
     required this.nome,
     required this.unidade,
-    required this.quantidadeEstoque,
+    required this.qtdEstoque,
     required this.precoVenda,
     required this.status,
-    this.precoCusto,
-    this.codigoBarras,
+    this.custo,
+    this.codigoBarra,
     this.ultimaAlteracao,
   });
 
@@ -25,22 +25,22 @@ class Produto {
     int? id,
     String? nome,
     UnidadeProduto? unidade,
-    int? quantidadeEstoque,
+    double? qtdEstoque,
     double? precoVenda,
     StatusProduto? status,
-    double? precoCusto,
-    String? codigoBarras,
+    double? custo,
+    String? codigoBarra,
     DateTime? ultimaAlteracao,
   }) {
     return Produto(
       id: id ?? this.id,
       nome: nome ?? this.nome,
       unidade: unidade ?? this.unidade,
-      quantidadeEstoque: quantidadeEstoque ?? this.quantidadeEstoque,
+      qtdEstoque: qtdEstoque ?? this.qtdEstoque,
       precoVenda: precoVenda ?? this.precoVenda,
       status: status ?? this.status,
-      precoCusto: precoCusto ?? this.precoCusto,
-      codigoBarras: codigoBarras ?? this.codigoBarras,
+      custo: custo ?? this.custo,
+      codigoBarra: codigoBarra ?? this.codigoBarra,
       ultimaAlteracao: ultimaAlteracao ?? this.ultimaAlteracao,
     );
   }
@@ -50,11 +50,11 @@ class Produto {
       'id': id,
       'nome': nome,
       'unidade': unidade.name,
-      'quantidadeEstoque': quantidadeEstoque,
+      'codigoBarra': codigoBarra,
+      'qtdEstoque': qtdEstoque,
+      'custo': custo,
       'precoVenda': precoVenda,
-      'status': status.name,
-      'precoCusto': precoCusto,
-      'codigoBarras': codigoBarras,
+      'Status': status == StatusProduto.ativo ? 1 : 0,
       'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
     }..removeWhere((key, value) => value == null);
   }
@@ -63,12 +63,15 @@ class Produto {
     return Produto(
       id: json['id'] as int,
       nome: json['nome'] as String,
-      unidade: UnidadeProduto.values.byName(json['unidade'] as String),
-      quantidadeEstoque: json['quantidadeEstoque'] as int,
+      unidade: UnidadeProduto.values.firstWhere(
+        (e) => e.name == json['unidade'],
+        orElse: () => UnidadeProduto.Un,
+      ),
+      qtdEstoque: (json['qtdEstoque'] as num).toDouble(),
       precoVenda: (json['precoVenda'] as num).toDouble(),
-      status: StatusProduto.values.byName(json['status'] as String),
-      precoCusto: json['precoCusto'] as double?,
-      codigoBarras: json['codigoBarras'] as String?,
+      status: json['Status'] == 1 ? StatusProduto.ativo : StatusProduto.inativo,
+      custo: (json['custo'] as num?)?.toDouble(),
+      codigoBarra: json['codigoBarra'] as String?,
       ultimaAlteracao: json['ultimaAlteracao'] != null
           ? DateTime.parse(json['ultimaAlteracao'] as String)
           : null,
@@ -77,16 +80,16 @@ class Produto {
 
   @override
   String toString() {
-    return 'Produto($id, $nome, ${unidade.descricao}, $quantidadeEstoque, R\$$precoVenda, ${status.descricao})';
+    return 'Produto($id, $nome, ${unidade.descricao}, $qtdEstoque, R\$$precoVenda, ${status.descricao})';
   }
 }
 
 enum UnidadeProduto {
-  un('Unidade'),
-  cx('Caixa'),
-  kg('Quilograma'),
-  lt('Litro'),
-  ml('Mililitro');
+  Un('Unidade'),
+  Cx('Caixa'),
+  Kg('Quilograma'),
+  Lt('Litro'),
+  Ml('Mililitro');
 
   final String descricao;
   const UnidadeProduto(this.descricao);

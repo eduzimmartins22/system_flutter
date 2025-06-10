@@ -167,7 +167,7 @@ class PedidoController {
         limit: 1,
       );
       
-      if (produto.isEmpty || (produto.first['quantidadeEstoque'] as int) < item.quantidade) {
+      if (produto.isEmpty || (produto.first['qtdEstoque'] as double) < item.quantidade) {
         return false;
       }
     }
@@ -193,14 +193,14 @@ class PedidoController {
     );
 
     if (produto.isNotEmpty) {
-      final estoqueAtual = produto.first['quantidadeEstoque'] as int;
+      final estoqueAtual = produto.first['qtdEstoque'] as double;
       final novoEstoque = estoqueAtual - quantidadeVendida;
       
       // Atualiza estoque
       await txn.update(
         'produtos',
         {
-          'quantidadeEstoque': novoEstoque,
+          'qtdEstoque': novoEstoque,
           'ultimaAlteracao': DateTime.now().toIso8601String(),
         },
         where: 'id = ?',
@@ -232,13 +232,13 @@ class PedidoController {
       );
 
       if (produto.isNotEmpty) {
-        final estoqueAtual = produto.first['quantidadeEstoque'] as int;
+        final estoqueAtual = produto.first['qtdEstoque'] as double;
         final novoEstoque = estoqueAtual + diferencaQuantidade;
         
         await txn.update(
           'produtos',
           {
-            'quantidadeEstoque': novoEstoque,
+            'qtdEstoque': novoEstoque,
             'ultimaAlteracao': DateTime.now().toIso8601String(),
           },
           where: 'id = ?',
@@ -266,11 +266,11 @@ class PedidoController {
     );
 
     if (produto.isNotEmpty) {
-      final estoqueAtual = produto.first['quantidadeEstoque'] as int;
+      final estoqueAtual = produto.first['qtdEstoque'] as double;
       await txn.update(
         'produtos',
         {
-          'quantidadeEstoque': estoqueAtual + quantidade,
+          'qtdEstoque': estoqueAtual + quantidade,
           'ultimaAlteracao': DateTime.now().toIso8601String(),
         },
         where: 'id = ?',

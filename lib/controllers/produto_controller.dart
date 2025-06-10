@@ -1,5 +1,3 @@
-import 'package:sqflite/sqflite.dart';
-
 import '../database/db_helper.dart';
 import '../models/produto_model.dart';
 
@@ -16,8 +14,8 @@ class ProdutoController {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'produtos',
-      where: 'status = ?',
-      whereArgs: ['ativo'],
+      where: 'Status = ?',
+      whereArgs: [1],
     );
     return maps.map((map) => Produto.fromJson(map)).toList();
   }
@@ -38,8 +36,7 @@ class ProdutoController {
 
   Future<int> adicionarProduto(Produto produto) async {
     final db = await _dbHelper.database;
-    final map = produto.toJson();
-    map.remove('id');
+    final map = produto.toJson()..remove('id');
     return await db.insert('produtos', map);
   }
 

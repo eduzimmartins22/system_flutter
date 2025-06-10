@@ -51,17 +51,16 @@ class DatabaseHelper {
       CREATE TABLE produtos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
-        unidade TEXT NOT NULL CHECK (unidade IN ('un', 'cx', 'kg', 'lt', 'ml')),
-        quantidadeEstoque INTEGER NOT NULL DEFAULT 0,
-        precoVenda REAL NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('ativo', 'inativo')),
-        precoCusto REAL,
-        codigoBarras TEXT,
+        unidade TEXT NOT NULL CHECK (unidade IN ('Un', 'Cx', 'Kg', 'Lt', 'Ml')),
+        qtdEstoque REAL NOT NULL DEFAULT 0,
+        precoVenda REAL NOT NULL CHECK (precoVenda >= 0),
+        custo REAL,
+        codigoBarra TEXT,
+        Status INTEGER NOT NULL CHECK (Status IN (0, 1)),
         ultimaAlteracao TEXT,
-        CONSTRAINT preco_venda_positivo CHECK (precoVenda >= 0),
-        CONSTRAINT estoque_positivo CHECK (quantidadeEstoque >= 0),
+        CONSTRAINT estoque_positivo CHECK (qtdEstoque >= 0),
         CONSTRAINT produto_nome_unico UNIQUE (nome)
-      )
+      );
     ''');
 
     //cliente
@@ -149,52 +148,52 @@ class DatabaseHelper {
     // Produtos
   await db.insert('produtos', {
     'nome': 'Caneta Azul',
-    'unidade': 'un',
-    'quantidadeEstoque': 100,
+    'unidade': 'Un',
+    'qtdEstoque': 100,
     'precoVenda': 2.50,
-    'status': 'ativo',
-    'precoCusto': 1.00,
-    'codigoBarras': '1234567890123',
+    'Status': 1,
+    'custo': 1.00,
+    'codigoBarra': '1234567890123',
   });
 
   await db.insert('produtos', {
     'nome': 'Caderno 100 folhas',
-    'unidade': 'un',
-    'quantidadeEstoque': 50,
+    'unidade': 'Un',
+    'qtdEstoque': 50,
     'precoVenda': 12.90,
-    'status': 'ativo',
-    'precoCusto': 7.50,
-    'codigoBarras': '7894561230012',
+    'Status': 1,
+    'custo': 7.50,
+    'codigoBarra': '7894561230012',
   });
 
   await db.insert('produtos', {
     'nome': 'Garrafa 1L',
-    'unidade': 'lt',
-    'quantidadeEstoque': 30,
+    'unidade': 'Lt',
+    'qtdEstoque': 30,
     'precoVenda': 8.00,
-    'status': 'ativo',
-    'precoCusto': 5.00,
-    'codigoBarras': '0001112223334',
+    'Status': 1,
+    'custo': 5.00,
+    'codigoBarra': '0001112223334',
   });
 
   await db.insert('produtos', {
     'nome': 'Caixa de lápis',
-    'unidade': 'cx',
-    'quantidadeEstoque': 20,
+    'unidade': 'Cx',
+    'qtdEstoque': 20,
     'precoVenda': 15.00,
-    'status': 'ativo',
-    'precoCusto': 9.00,
-    'codigoBarras': '3216549870001',
+    'Status': 1,
+    'custo': 9.00,
+    'codigoBarra': '3216549870001',
   });
 
   await db.insert('produtos', {
     'nome': 'Resma de papel A4',
-    'unidade': 'cx',
-    'quantidadeEstoque': 40,
+    'unidade': 'Cx',
+    'qtdEstoque': 40,
     'precoVenda': 25.00,
-    'status': 'ativo',
-    'precoCusto': 18.00,
-    'codigoBarras': '1112223334445',
+    'Status': 1,
+    'custo': 18.00,
+    'codigoBarra': '1112223334445',
   });
 
   // Clientes Pessoa Física

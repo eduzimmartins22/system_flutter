@@ -3,6 +3,7 @@ import '../configuracao/configuracao.dart';
 import '../produto/cadastro_produto.dart';
 import '../usuario/cadastro_usuario.dart';
 import '../cliente/cadastro_cliente.dart';
+import '../sincronizacao/sync.dart';
 import '../pedido/lista_pedidos.dart';
 import '../login/login.dart';
 
@@ -80,6 +81,13 @@ class _HomePageState extends State<HomePage> {
                 icon: Icons.settings,
                 title: 'Configuração',
                 destination: ConfiguracaoPage(),
+              ),
+              const SizedBox(height: 16),
+                _buildMenuCard(
+                context,
+                icon: Icons.sync,
+                title: 'Sincronização',
+                destination: SyncPage(),
               ),
             ],
           ),
