@@ -6,7 +6,11 @@ class ProdutoController {
 
   Future<List<Produto>> getProdutos() async {
     final db = await _dbHelper.database;
-    final maps = await db.query('produtos');
+    final maps = await db.query(
+      'produtos',
+      where: 'deletado = ?',
+      whereArgs: [0],
+    );
     return maps.map((map) => Produto.fromJson(map)).toList();
   }
 
@@ -14,8 +18,8 @@ class ProdutoController {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'produtos',
-      where: 'Status = ?',
-      whereArgs: [1],
+      where: 'Status = ? AND deletado = ?',
+      whereArgs: [1, 0],
     );
     return maps.map((map) => Produto.fromJson(map)).toList();
   }
@@ -36,7 +40,9 @@ class ProdutoController {
 
   Future<int> adicionarProduto(Produto produto) async {
     final db = await _dbHelper.database;
-    final map = produto.toJson()..remove('id');
+    final map = produto.toJson()
+      ..remove('id')
+      ..['deletado'] = 0;
     return await db.insert('produtos', map);
   }
 
@@ -53,6 +59,17 @@ class ProdutoController {
 
   Future<bool> removerProduto(int id) async {
     final db = await _dbHelper.database;
+    final count = await db.update(
+      'produtos',
+      {'deletado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return count > 0;
+  }
+
+  Future<bool> deletarProduto(int id) async {
+    final db = await _dbHelper.database;
     final count = await db.delete(
       'produtos',
       where: 'id = ?',
@@ -63,7 +80,31 @@ class ProdutoController {
 
   Future<int> contarProdutos() async {
     final db = await _dbHelper.database;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM produtos');
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM produtos WHERE deletado = ?',
+      [0]
+    );
     return result.first['count'] as int;
+  }
+
+  Future<List<Produto>> getProdutosDeletados() async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'produtos',
+      where: 'deletado = ?',
+      whereArgs: [1],
+    );
+    return maps.map((map) => Produto.fromJson(map)).toList();
+  }
+
+  Future<bool> restaurarProduto(int id) async {
+    final db = await _dbHelper.database;
+    final count = await db.update(
+      'produtos',
+      {'deletado': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return count > 0;
   }
 }

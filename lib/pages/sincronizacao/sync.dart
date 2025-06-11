@@ -27,39 +27,42 @@ class _SyncPageState extends State<SyncPage> {
     });
   }
 
+  void _onPressSync() {
+    // Aqui você pode adicionar lógica de sincronização posteriormente
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sincronização iniciada')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sincronização'),
       ),
-      body: Center(
-        child: _isLoading
-            ? const CircularProgressIndicator()
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: _serverLink.isEmpty
-                        ? null
-                        : () {
-                            // Lógica de sincronização será implementada futuramente
-                          },
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ElevatedButton(
+                    onPressed: _serverLink.isEmpty ? null : _onPressSync,
                     child: const Text('Sincronizar Banco de Dados'),
                   ),
-                  if (_serverLink.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16.0),
-                      child: Text(
-                        'Configure o link do servidor nas configurações',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                ),
+                if (_serverLink.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      'Configure o link do servidor nas configurações',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
                       ),
                     ),
-                ],
-              ),
-      ),
+                  ),
+              ],
+            ),
     );
   }
 }
