@@ -3,10 +3,13 @@ import '../models/usuario_model.dart';
 
 class UsuarioController {
   final DatabaseHelper _dbHelper = DatabaseHelper();
-
-  Future<List<Usuario>> getUsuarios() async {
+Future<List<Usuario>> getUsuarios() async {
     final db = await _dbHelper.database;
-    final maps = await db.query('usuarios');
+    final maps = await db.query(
+      'usuarios',
+      where: 'deletado = ?',
+      whereArgs: [0],
+    );
     return maps.map((map) => Usuario.fromJson(map)).toList();
   }
 
@@ -19,6 +22,7 @@ class UsuarioController {
     }
     final map = usuario.toJson();
     map.remove('id');
+    map['deletado'] = 0;
     return await db.insert('usuarios', map);
   }
 
@@ -27,8 +31,8 @@ class UsuarioController {
     
     final usuariosComMesmoNome = await db.query(
       'usuarios',
-      where: 'nome = ? AND id <> ?',
-      whereArgs: [usuario.nome, usuario.id],
+      where: 'nome = ? AND id <> ? AND deletado = ?',
+      whereArgs: [usuario.nome, usuario.id, 0],
     );
     
     if (usuariosComMesmoNome.isNotEmpty) {
@@ -45,6 +49,17 @@ class UsuarioController {
   }
 
   Future<bool> removerUsuario(int id) async {
+    final db = await _dbHelper.database;
+    final count = await db.update(
+      'usuarios',
+      {'deletado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return count > 0;
+  }
+
+  Future<bool> deletarUsuario(int id) async {
     final db = await _dbHelper.database;
     final count = await db.delete(
       'usuarios',
@@ -73,8 +88,8 @@ class UsuarioController {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'usuarios',
-      where: 'nome = ? AND senha = ?',
-      whereArgs: [nome, senha],
+      where: 'nome = ? AND senha = ? AND deletado = ?',
+      whereArgs: [nome, senha, 0],
       limit: 1,
     );
     
@@ -88,9 +103,57 @@ class UsuarioController {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'usuarios',
-      where: 'nome = ?',
-      whereArgs: [nome],
+      where: 'nome = ? AND deletado = ?',
+      whereArgs: [nome, 0],
     );
     return maps.isNotEmpty;
+  }
+
+  Future<List<Usuario>> getUsuariosDeletados() async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'usuarios',
+      where: 'deletado = ?',
+      whereArgs: [1], // 1 = deletado
+    );
+    return maps.map((map) => Usuario.fromJson(map)).toList();
+  }
+
+  Future<bool> restaurarUsuario(int id) async {
+    final db = await _dbHelper.database;
+    final count = await db.update(
+      'usuarios',
+      {'deletado': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return count > 0;
+  }
+
+  Future<List<Usuario>> getUsuariosNaoSincronizados() async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'usuarios',
+      where: 'deletado = ? AND (ultimaAlteracao IS NULL OR id NOT IN '
+             '(SELECT id FROM usuarios WHERE ultimaAlteracao IS NOT NULL))',
+      whereArgs: [0],
+    );
+    return maps.map((map) => Usuario.fromJson(map)).toList();
+  }
+
+  Future<void> upsertUsuarioFromServer(Usuario usuario) async {
+    final db = await _dbHelper.database;
+    final existing = await buscarPorId(usuario.id!);
+    
+    if (existing != null) {
+      await db.update(
+        'usuarios',
+        usuario.toJson(),
+        where: 'id = ?',
+        whereArgs: [usuario.id],
+      );
+    } else {
+      await db.insert('usuarios', usuario.toJson());
+    }
   }
 }

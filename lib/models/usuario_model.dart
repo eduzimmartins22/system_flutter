@@ -2,7 +2,7 @@ class Usuario {
   final int id;
   final String nome;
   final String senha;
-  final DateTime? ultimaAlteracao;
+  late final DateTime? ultimaAlteracao;
 
   Usuario({
     required this.id,
@@ -18,7 +18,7 @@ class Usuario {
       throw ArgumentError('Senha não pode ser vazia');
     }
     
-    if (senha.length < 6 && nome != 'admin') {
+    if (senha.length < 6) {
       throw ArgumentError('Senha deve ter pelo menos 6 caracteres');
     }
   }

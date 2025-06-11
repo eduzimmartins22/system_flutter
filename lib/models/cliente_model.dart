@@ -69,7 +69,7 @@ class Cliente {
     return {
       'id': id,
       'nome': nome,
-      'tipo': tipo.name,
+      'tipo': tipo.sigla,
       'cpfCnpj': cpfCnpj,
       'email': email,
       'numero': telefone,
@@ -86,7 +86,7 @@ class Cliente {
     return Cliente(
       id: json['id'] as int,
       nome: json['nome'] as String,
-      tipo: TipoCliente.values.byName(json['tipo'] as String),
+      tipo: TipoCliente.fromSigla(json['tipo'] as String),
       cpfCnpj: json['cpfCnpj'] as String,
       email: json['email'] as String?,
       telefone: json['telefone'] as String?,
@@ -118,9 +118,14 @@ class Cliente {
 }
 
 enum TipoCliente {
-  fisica('Pessoa Física'),
-  juridica('Pessoa Jurídica');
+  fisica('Pessoa Física', 'F'),
+  juridica('Pessoa Jurídica', 'J');
 
   final String descricao;
-  const TipoCliente(this.descricao);
+  final String sigla;
+  const TipoCliente(this.descricao, this.sigla);
+  
+  static TipoCliente fromSigla(String sigla) {
+    return values.firstWhere((e) => e.sigla == sigla);
+  }
 }
