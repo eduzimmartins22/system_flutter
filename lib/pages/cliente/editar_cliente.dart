@@ -16,10 +16,11 @@ class _EditarClientePageState extends State<EditarClientePage> {
   final _controller = ClienteController();
   late int _id;
   late TipoCliente _tipoSelecionado;
+
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _cpfCnpjController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _numeroController = TextEditingController();
+  final TextEditingController _telefoneController = TextEditingController();
   final TextEditingController _cepController = TextEditingController();
   final TextEditingController _enderecoController = TextEditingController();
   final TextEditingController _bairroController = TextEditingController();
@@ -31,13 +32,13 @@ class _EditarClientePageState extends State<EditarClientePage> {
     super.initState();
     _id = widget.cliente?.id ?? DateTime.now().millisecondsSinceEpoch;
     _tipoSelecionado = widget.cliente?.tipo ?? TipoCliente.fisica;
-    
+
     if (widget.cliente != null) {
       _nomeController.text = widget.cliente!.nome;
       _cpfCnpjController.text = widget.cliente!.cpfCnpj;
       _emailController.text = widget.cliente!.email ?? '';
-      _numeroController.text = widget.cliente!.numero?.toString() ?? '';
-      _cepController.text = widget.cliente!.cep?.toString() ?? '';
+      _telefoneController.text = widget.cliente!.telefone?.toString() ?? '';
+      _cepController.text = widget.cliente!.cep ?? '';
       _enderecoController.text = widget.cliente!.endereco ?? '';
       _bairroController.text = widget.cliente!.bairro ?? '';
       _cidadeController.text = widget.cliente!.cidade ?? '';
@@ -50,7 +51,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
     _nomeController.dispose();
     _cpfCnpjController.dispose();
     _emailController.dispose();
-    _numeroController.dispose();
+    _telefoneController.dispose();
     _cepController.dispose();
     _enderecoController.dispose();
     _bairroController.dispose();
@@ -68,7 +69,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
           tipo: _tipoSelecionado,
           cpfCnpj: _cpfCnpjController.text,
           email: _emailController.text.isNotEmpty ? _emailController.text : null,
-          numero: _numeroController.text.isNotEmpty ? int.parse(_numeroController.text) : null,
+          telefone: _telefoneController.text.isNotEmpty ? _telefoneController.text : null,
           cep: _cepController.text.isNotEmpty ? _cepController.text : null,
           endereco: _enderecoController.text.isNotEmpty ? _enderecoController.text : null,
           bairro: _bairroController.text.isNotEmpty ? _bairroController.text : null,
@@ -84,7 +85,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
             );
             return;
           }
-          
           await _controller.adicionarCliente(novoCliente);
           sucesso = true;
         } else {
@@ -94,7 +94,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
             );
             return;
           }
-          
           sucesso = await _controller.atualizarCliente(novoCliente);
         }
 
@@ -133,9 +132,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                 }).toList(),
                 onChanged: (value) {
                   if (value != null) {
-                    setState(() {
-                      _tipoSelecionado = value;
-                    });
+                    setState(() => _tipoSelecionado = value);
                   }
                 },
                 decoration: const InputDecoration(
@@ -150,12 +147,8 @@ class _EditarClientePageState extends State<EditarClientePage> {
                   labelText: 'Nome *',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o nome';
-                  }
-                  return null;
-                },
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Por favor, insira o nome' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -166,15 +159,9 @@ class _EditarClientePageState extends State<EditarClientePage> {
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o documento';
-                  }
-                  if (_tipoSelecionado == TipoCliente.fisica && value.length != 11) {
-                    return 'CPF deve ter 11 dígitos';
-                  }
-                  if (_tipoSelecionado == TipoCliente.juridica && value.length != 14) {
-                    return 'CNPJ deve ter 14 dígitos';
-                  }
+                  if (value == null || value.isEmpty) return 'Por favor, insira o documento';
+                  if (_tipoSelecionado == TipoCliente.fisica && value.length != 11) return 'CPF deve ter 11 dígitos';
+                  if (_tipoSelecionado == TipoCliente.juridica && value.length != 14) return 'CNPJ deve ter 14 dígitos';
                   return null;
                 },
               ),
@@ -189,29 +176,29 @@ class _EditarClientePageState extends State<EditarClientePage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _enderecoController,
+                controller: _telefoneController,
                 decoration: const InputDecoration(
-                  labelText: 'Endereço',
+                  labelText: 'Telefone',
                   border: OutlineInputBorder(),
                 ),
+                keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    flex: 3,
+                    flex: 4,
                     child: TextFormField(
-                      controller: _numeroController,
+                      controller: _enderecoController,
                       decoration: const InputDecoration(
-                        labelText: 'Número',
+                        labelText: 'Endereço',
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    flex: 4,
+                    flex: 3,
                     child: TextFormField(
                       controller: _cepController,
                       decoration: const InputDecoration(
@@ -220,6 +207,14 @@ class _EditarClientePageState extends State<EditarClientePage> {
                       ),
                       keyboardType: TextInputType.number,
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  BuscarCepButton(
+                    cepController: _cepController,
+                    enderecoController: _enderecoController,
+                    bairroController: _bairroController,
+                    cidadeController: _cidadeController,
+                    ufController: _ufController,
                   ),
                 ],
               ),
@@ -310,6 +305,75 @@ class _EditarClientePageState extends State<EditarClientePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class BuscarCepButton extends StatefulWidget {
+  final TextEditingController cepController;
+  final TextEditingController enderecoController;
+  final TextEditingController bairroController;
+  final TextEditingController cidadeController;
+  final TextEditingController ufController;
+
+  const BuscarCepButton({
+    Key? key,
+    required this.cepController,
+    required this.enderecoController,
+    required this.bairroController,
+    required this.cidadeController,
+    required this.ufController,
+  }) : super(key: key);
+
+  @override
+  State<BuscarCepButton> createState() => _BuscarCepButtonState();
+}
+
+class _BuscarCepButtonState extends State<BuscarCepButton> {
+  final ClienteController _controller = ClienteController();
+  bool _carregando = false;
+
+  Future<void> _buscarCep() async {
+    final cep = widget.cepController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cep.length != 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('CEP deve ter 8 dígitos')),
+      );
+      return;
+    }
+
+    setState(() => _carregando = true);
+
+    try {
+      final endereco = await _controller.buscarEnderecoPorCep(cep);
+      widget.ufController.text = endereco['estado'] ?? '';
+      widget.enderecoController.text = endereco['logradouro'] ?? '';
+      widget.bairroController.text = endereco['bairro'] ?? '';
+      widget.cidadeController.text = endereco['cidade'] ?? '';
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro: $e')),
+      );
+    } finally {
+      setState(() => _carregando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 58,
+      child: ElevatedButton(
+        onPressed: _carregando ? null : _buscarCep,
+        child: _carregando
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Buscar'),
       ),
     );
   }

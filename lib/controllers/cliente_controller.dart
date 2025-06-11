@@ -1,8 +1,10 @@
 import '../database/db_helper.dart';
 import '../models/cliente_model.dart';
+import '../controllers/buscar_cep.dart';
 
 class ClienteController {
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  final ViaCepService _viaCepService = ViaCepService();
 
   Future<List<Cliente>> getClientes() async {
     final db = await _dbHelper.database;
@@ -103,5 +105,85 @@ class ClienteController {
     );
     
     return maps.isNotEmpty;
+  }
+
+  
+
+  Future<Map<String, dynamic>> consultarCep(String cep) async {
+    try {
+      return await _viaCepService.consultarCep(cep);
+    } catch (e) {
+      throw Exception('Erro ao consultar CEP: ${e.toString()}');
+    }
+  }
+
+ 
+  Future<int> adicionarClienteComCep(Cliente cliente, String cep) async {
+    try {
+
+      final dadosCep = await consultarCep(cep);
+      
+
+      
+      return await adicionarCliente(cliente);
+    } catch (e) {
+      throw Exception('Erro ao adicionar cliente com CEP: ${e.toString()}');
+    }
+  }
+
+  Future<bool> atualizarClienteComCep(Cliente cliente, String cep) async {
+    try {
+    
+      final dadosCep = await consultarCep(cep);
+      
+      // Criar uma nova instância do cliente com os dados do endereço preenchidos
+      final clienteComEndereco = Cliente(
+        id: cliente.id,
+        nome: cliente.nome,
+        tipo: cliente.tipo,
+        cpfCnpj: cliente.cpfCnpj,
+        telefone: cliente.telefone,
+        email: cliente.email,
+      
+        endereco: dadosCep['logradouro'] ?? cliente.endereco,
+        cidade: dadosCep['localidade'] ?? cliente.cidade,
+        uf: dadosCep['uf'] ?? cliente.uf,
+        cep: dadosCep['cep'] ?? cep,
+        bairro: dadosCep['bairro'] ?? cliente.bairro,
+        ultimaAlteracao: DateTime.now(),
+      );
+      
+      return await atualizarCliente(clienteComEndereco);
+    } catch (e) {
+      throw Exception('Erro ao atualizar cliente com CEP: ${e.toString()}');
+    }
+  }
+
+
+  Future<Map<String, String>> buscarEnderecoPorCep(String cep) async {
+    try {
+      final dadosCep = await consultarCep(cep);
+      
+      return {
+        'logradouro': dadosCep['logradouro'] ?? '',
+        'bairro': dadosCep['bairro'] ?? '',
+        'cidade': dadosCep['localidade'] ?? '',
+        'estado': dadosCep['uf'] ?? '',
+        'cep': dadosCep['cep'] ?? cep,
+        'complemento': dadosCep['complemento'] ?? '',
+      };
+    } catch (e) {
+      throw Exception('Erro ao buscar endereço: ${e.toString()}');
+    }
+  }
+
+  /// Valida se um CEP existe na API ViaCep
+  Future<bool> validarCep(String cep) async {
+    try {
+      await consultarCep(cep);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }
