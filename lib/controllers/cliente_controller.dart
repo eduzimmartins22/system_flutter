@@ -109,7 +109,6 @@ class ClienteController {
 
   
 
-  /// Consulta um CEP na API ViaCep e retorna os dados de endereço
   Future<Map<String, dynamic>> consultarCep(String cep) async {
     try {
       return await _viaCepService.consultarCep(cep);
@@ -118,10 +117,10 @@ class ClienteController {
     }
   }
 
-  /// Cria um cliente preenchendo automaticamente o endereço via CEP
+ 
   Future<int> adicionarClienteComCep(Cliente cliente, String cep) async {
     try {
-      // Consultar dados do CEP
+
       final dadosCep = await consultarCep(cep);
       
 
@@ -132,10 +131,9 @@ class ClienteController {
     }
   }
 
-  /// Atualiza um cliente preenchendo automaticamente o endereço via CEP
   Future<bool> atualizarClienteComCep(Cliente cliente, String cep) async {
     try {
-      // Consultar dados do CEP
+    
       final dadosCep = await consultarCep(cep);
       
       // Criar uma nova instância do cliente com os dados do endereço preenchidos
@@ -146,7 +144,7 @@ class ClienteController {
         cpfCnpj: cliente.cpfCnpj,
         numero: cliente.numero,
         email: cliente.email,
-        // Preencher endereço com dados do ViaCep
+      
         endereco: dadosCep['logradouro'] ?? cliente.endereco,
         cidade: dadosCep['localidade'] ?? cliente.cidade,
         uf: dadosCep['uf'] ?? cliente.uf,
@@ -161,8 +159,7 @@ class ClienteController {
     }
   }
 
-  /// Busca dados de endereço por CEP (método auxiliar para formulários)
-  /// Retorna um Map com os campos formatados para preenchimento automático
+
   Future<Map<String, String>> buscarEnderecoPorCep(String cep) async {
     try {
       final dadosCep = await consultarCep(cep);

@@ -31,13 +31,13 @@ class _EditarClientePageState extends State<EditarClientePage> {
     super.initState();
     _id = widget.cliente?.id ?? DateTime.now().millisecondsSinceEpoch;
     _tipoSelecionado = widget.cliente?.tipo ?? TipoCliente.fisica;
-    
+
     if (widget.cliente != null) {
       _nomeController.text = widget.cliente!.nome;
       _cpfCnpjController.text = widget.cliente!.cpfCnpj;
       _emailController.text = widget.cliente!.email ?? '';
       _numeroController.text = widget.cliente!.numero?.toString() ?? '';
-      _cepController.text = widget.cliente!.cep?.toString() ?? '';
+      _cepController.text = widget.cliente!.cep ?? '';
       _enderecoController.text = widget.cliente!.endereco ?? '';
       _bairroController.text = widget.cliente!.bairro ?? '';
       _cidadeController.text = widget.cliente!.cidade ?? '';
@@ -84,7 +84,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
             );
             return;
           }
-          
           await _controller.adicionarCliente(novoCliente);
           sucesso = true;
         } else {
@@ -94,7 +93,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
             );
             return;
           }
-          
           sucesso = await _controller.atualizarCliente(novoCliente);
         }
 
@@ -133,9 +131,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                 }).toList(),
                 onChanged: (value) {
                   if (value != null) {
-                    setState(() {
-                      _tipoSelecionado = value;
-                    });
+                    setState(() => _tipoSelecionado = value);
                   }
                 },
                 decoration: const InputDecoration(
@@ -150,12 +146,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                   labelText: 'Nome *',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o nome';
-                  }
-                  return null;
-                },
+                validator: (value) => value == null || value.isEmpty ? 'Por favor, insira o nome' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -166,15 +157,9 @@ class _EditarClientePageState extends State<EditarClientePage> {
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o documento';
-                  }
-                  if (_tipoSelecionado == TipoCliente.fisica && value.length != 11) {
-                    return 'CPF deve ter 11 dígitos';
-                  }
-                  if (_tipoSelecionado == TipoCliente.juridica && value.length != 14) {
-                    return 'CNPJ deve ter 14 dígitos';
-                  }
+                  if (value == null || value.isEmpty) return 'Por favor, insira o documento';
+                  if (_tipoSelecionado == TipoCliente.fisica && value.length != 11) return 'CPF deve ter 11 dígitos';
+                  if (_tipoSelecionado == TipoCliente.juridica && value.length != 14) return 'CNPJ deve ter 14 dígitos';
                   return null;
                 },
               ),
@@ -187,18 +172,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _enderecoController,
-                decoration: const InputDecoration(
-                  labelText: 'Endereço',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
+              Expanded(
                     flex: 3,
                     child: TextFormField(
                       controller: _numeroController,
@@ -209,6 +183,18 @@ class _EditarClientePageState extends State<EditarClientePage> {
                       keyboardType: TextInputType.number,
                     ),
                   ),
+              
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const SizedBox(height: 16),
+              TextFormField(
+                controller: _enderecoController,
+                decoration: const InputDecoration(
+                  labelText: 'Endereço',
+                  border: OutlineInputBorder(),
+                ),
+              ),
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 4,
@@ -221,6 +207,14 @@ class _EditarClientePageState extends State<EditarClientePage> {
                       keyboardType: TextInputType.number,
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  BuscarCepButton(
+  cepController: _cepController,
+  enderecoController: _enderecoController,
+  bairroController: _bairroController,
+  cidadeController: _cidadeController,
+  ufController: _ufController,
+),
                 ],
               ),
               const SizedBox(height: 16),
@@ -310,6 +304,78 @@ class _EditarClientePageState extends State<EditarClientePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// =======================
+// Componente de botão separado
+// =======================
+
+class BuscarCepButton extends StatefulWidget {
+  final TextEditingController cepController;
+  final TextEditingController enderecoController;
+  final TextEditingController bairroController;
+  final TextEditingController cidadeController;
+  final TextEditingController ufController;
+
+  const BuscarCepButton({
+    Key? key,
+    required this.cepController,
+    required this.enderecoController,
+    required this.bairroController,
+    required this.cidadeController,
+    required this.ufController,
+  }) : super(key: key);
+
+  @override
+  State<BuscarCepButton> createState() => _BuscarCepButtonState();
+}
+
+class _BuscarCepButtonState extends State<BuscarCepButton> {
+  final ClienteController _controller = ClienteController();
+  bool _carregando = false;
+
+  Future<void> _buscarCep() async {
+    final cep = widget.cepController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cep.length != 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('CEP deve ter 8 dígitos')),
+      );
+      return;
+    }
+
+    setState(() => _carregando = true);
+
+    try {
+      final endereco = await _controller.buscarEnderecoPorCep(cep);
+      widget.enderecoController.text = endereco['logradouro'] ?? '';
+      widget.bairroController.text = endereco['bairro'] ?? '';
+      widget.cidadeController.text = endereco['cidade'] ?? '';
+      widget.ufController.text = endereco['uf'] ?? '';
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro: $e')),
+      );
+    } finally {
+      setState(() => _carregando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 58,
+      child: ElevatedButton(
+        onPressed: _carregando ? null : _buscarCep,
+        child: _carregando
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Buscar'),
       ),
     );
   }
