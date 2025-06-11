@@ -3,7 +3,8 @@ import '../models/usuario_model.dart';
 
 class UsuarioController {
   final DatabaseHelper _dbHelper = DatabaseHelper();
-Future<List<Usuario>> getUsuarios() async {
+  
+  Future<List<Usuario>> getUsuarios() async {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'usuarios',
@@ -143,7 +144,7 @@ Future<List<Usuario>> getUsuarios() async {
 
   Future<void> upsertUsuarioFromServer(Usuario usuario) async {
     final db = await _dbHelper.database;
-    final existing = await buscarPorId(usuario.id!);
+    final existing = await buscarPorId(usuario.id);
     
     if (existing != null) {
       await db.update(
@@ -155,5 +156,24 @@ Future<List<Usuario>> getUsuarios() async {
     } else {
       await db.insert('usuarios', usuario.toJson());
     }
+  }
+
+  Future<void> atualizarDataAlteracao(int id, String ultimaAlteracao) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'usuarios',
+      {'ultimaAlteracao': ultimaAlteracao},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<Usuario>> getUsuariosComAlteracoes() async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'usuarios',
+      where: 'ultimaAlteracao IS NOT NULL',
+    );
+    return List.generate(maps.length, (i) => Usuario.fromJson(maps[i]));
   }
 }

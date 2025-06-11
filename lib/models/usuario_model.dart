@@ -20,10 +20,6 @@ class Usuario {
     if (senha.isEmpty) {
       throw ArgumentError('Senha não pode ser vazia');
     }
-    
-    if (senha.length < 6) {
-      throw ArgumentError('Senha deve ter pelo menos 6 caracteres');
-    }
   }
 
   Usuario copyWith({

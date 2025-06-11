@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../controllers/configuracao_controller.dart';
+import '../../controllers/sync_controller.dart';
 
 class SyncPage extends StatefulWidget {
   const SyncPage({Key? key}) : super(key: key);
@@ -12,6 +13,8 @@ class _SyncPageState extends State<SyncPage> {
   final ConfiguracaoController _configuracaoController = ConfiguracaoController();
   String _serverLink = '';
   bool _isLoading = true;
+  bool _isSyncing = false;
+  List<String> _syncLogs = [];
 
   @override
   void initState() {
@@ -27,11 +30,45 @@ class _SyncPageState extends State<SyncPage> {
     });
   }
 
-  void _onPressSync() {
-    // Aqui você pode adicionar lógica de sincronização posteriormente
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sincronização iniciada')),
-    );
+  void _addLog(String message) {
+    setState(() {
+      _syncLogs.add(message);
+      // Limita o tamanho do log para evitar consumo excessivo de memória
+      if (_syncLogs.length > 100) {
+        _syncLogs.removeAt(0);
+      }
+    });
+  }
+
+  Future<void> _onPressSync() async {
+    if (_isSyncing) return;
+    
+    setState(() {
+      _isSyncing = true;
+      _syncLogs.clear();
+    });
+
+    _addLog('Iniciando sincronização...');
+    _addLog('Conectando ao servidor: $_serverLink');
+
+    try {
+      final syncController = SyncController(_serverLink, onLog: _addLog);
+      await syncController.sincronizarDados();
+      _addLog('Sincronização concluída com sucesso!');
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sincronização concluída com sucesso')),
+      );
+    } catch (e) {
+      _addLog('Erro durante a sincronização: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro durante a sincronização: $e')),
+      );
+    } finally {
+      setState(() {
+        _isSyncing = false;
+      });
+    }
   }
 
   @override
@@ -47,8 +84,17 @@ class _SyncPageState extends State<SyncPage> {
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: ElevatedButton(
-                    onPressed: _serverLink.isEmpty ? null : _onPressSync,
-                    child: const Text('Sincronizar Banco de Dados'),
+                    onPressed: (_serverLink.isEmpty || _isSyncing) ? null : _onPressSync,
+                    child: _isSyncing
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(width: 10),
+                              Text('Sincronizando...'),
+                            ],
+                          )
+                        : const Text('Sincronizar Banco de Dados'),
                   ),
                 ),
                 if (_serverLink.isEmpty)
@@ -61,6 +107,37 @@ class _SyncPageState extends State<SyncPage> {
                       ),
                     ),
                   ),
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: _syncLogs.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Nenhum log de sincronização disponível',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        : ListView.builder(
+                            reverse: true, // Mostra os logs mais recentes primeiro
+                            itemCount: _syncLogs.length,
+                            itemBuilder: (context, index) {
+                              final log = _syncLogs.reversed.toList()[index];
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8.0, vertical: 4.0),
+                                child: Text(
+                                  log,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ),
               ],
             ),
     );
