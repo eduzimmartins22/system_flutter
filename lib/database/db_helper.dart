@@ -38,12 +38,7 @@ class DatabaseHelper {
 
   FutureOr<void> _onUpgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      await db.execute('ALTER TABLE usuarios ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
-      await db.execute('ALTER TABLE produtos ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
-      await db.execute('ALTER TABLE clientes ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
-      await db.execute('ALTER TABLE pedidos ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
-      await db.execute('ALTER TABLE pedido_itens ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
-      await db.execute('ALTER TABLE pedido_pagamentos ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+
     }
   }
 
@@ -87,7 +82,6 @@ class DatabaseHelper {
         cpfCnpj TEXT NOT NULL,
         email TEXT,
         telefone TEXT,
-        numero INTEGER,
         cep TEXT,
         endereco TEXT,
         bairro TEXT,
