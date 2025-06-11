@@ -3,12 +3,15 @@ class Usuario {
   final String nome;
   final String senha;
   late final DateTime? ultimaAlteracao;
+  final int deletado;
 
   Usuario({
     required this.id,
     required this.nome,
     required this.senha,
     this.ultimaAlteracao,
+    this.deletado = 0,
+
   }) {
     if (nome.isEmpty) {
       throw ArgumentError('Nome não pode ser vazio');
@@ -28,12 +31,14 @@ class Usuario {
     String? nome,
     String? senha,
     DateTime? ultimaAlteracao,
+    int? deletado,
   }) {
     return Usuario(
       id: id ?? this.id,
       nome: nome ?? this.nome,
       senha: senha ?? this.senha,
       ultimaAlteracao: ultimaAlteracao ?? this.ultimaAlteracao,
+      deletado: deletado ?? this.deletado,
     );
   }
 
@@ -43,6 +48,7 @@ class Usuario {
       'nome': nome,
       'senha': senha,
       'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
+      'deletado': deletado,
     };
   }
 
@@ -54,6 +60,7 @@ class Usuario {
       ultimaAlteracao: json['ultimaAlteracao'] != null
           ? DateTime.parse(json['ultimaAlteracao'] as String)
           : null,
+      deletado: json['deletado'] as int? ?? 0,
     );
   }
 

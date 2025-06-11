@@ -9,7 +9,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  static const int _newVersion = 2;
+  static const int _newVersion = 3;
   
   Future<Database> get database async {
     if (_database != null) return _database!;

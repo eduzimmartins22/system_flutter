@@ -5,6 +5,7 @@ class Pedido {
   final double totalPedido;
   final DateTime dataCriacao;
   final DateTime? ultimaAlteracao;
+  final int deletado;
   final List<PedidoItem> itens;
   final List<PedidoPagamento> pagamentos;
 
@@ -15,6 +16,7 @@ class Pedido {
     required this.totalPedido,
     required this.dataCriacao,
     this.ultimaAlteracao,
+    this.deletado = 0,
     required this.itens,
     required this.pagamentos,
   });
@@ -25,6 +27,8 @@ class Pedido {
     int? idUsuario,
     double? totalPedido,
     DateTime? dataCriacao,
+    DateTime? ultimaAlteracao,
+    int? deletado,
     List<PedidoItem>? itens,
     List<PedidoPagamento>? pagamentos,
   }) {
@@ -34,6 +38,8 @@ class Pedido {
       idUsuario: idUsuario ?? this.idUsuario,
       totalPedido: totalPedido ?? this.totalPedido,
       dataCriacao: dataCriacao ?? this.dataCriacao,
+      ultimaAlteracao: ultimaAlteracao ?? this.ultimaAlteracao,
+      deletado: deletado ?? this.deletado,
       itens: itens ?? this.itens,
       pagamentos: pagamentos ?? this.pagamentos,
     );
@@ -47,6 +53,7 @@ class Pedido {
       'totalPedido': totalPedido,
       'dataCriacao': dataCriacao.toIso8601String(),
       'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
+      'deletado': deletado,
       'itens': itens.map((item) => item.toJson()).toList(),
       'pagamentos': pagamentos.map((pag) => pag.toJson()).toList(),
     };
@@ -62,6 +69,7 @@ class Pedido {
       ultimaAlteracao: json['ultimaAlteracao'] != null 
           ? DateTime.parse(json['ultimaAlteracao'] as String) 
           : null,
+      deletado: json['deletado'] as int? ?? 0,
       itens: (json['itens'] as List<dynamic>)
           .map((item) => PedidoItem.fromJson(item as Map<String, dynamic>))
           .toList(),
