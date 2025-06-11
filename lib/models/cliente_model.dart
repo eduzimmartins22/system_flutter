@@ -4,7 +4,7 @@ class Cliente {
   final TipoCliente tipo;
   final String cpfCnpj;
   final String? email;
-  final int? numero;
+  final String? telefone;
   final String? cep;
   final String? endereco;
   final String? bairro;
@@ -18,7 +18,7 @@ class Cliente {
     required this.tipo,
     required this.cpfCnpj,
     this.email,
-    this.numero,
+    this.telefone,
     this.cep,
     this.endereco,
     this.bairro,
@@ -55,7 +55,7 @@ class Cliente {
       tipo: tipo ?? this.tipo,
       cpfCnpj: cpfCnpj ?? this.cpfCnpj,
       email: email ?? this.email,
-      numero: numero ?? this.numero,
+      telefone: telefone ?? this.telefone,
       cep: cep ?? this.cep,
       endereco: endereco ?? this.endereco,
       bairro: bairro ?? this.bairro,
@@ -72,7 +72,7 @@ class Cliente {
       'tipo': tipo.name,
       'cpfCnpj': cpfCnpj,
       'email': email,
-      'numero': numero,
+      'numero': telefone,
       'cep': cep,
       'endereco': endereco,
       'bairro': bairro,
@@ -89,7 +89,7 @@ class Cliente {
       tipo: TipoCliente.values.byName(json['tipo'] as String),
       cpfCnpj: json['cpfCnpj'] as String,
       email: json['email'] as String?,
-      numero: json['numero'] as int?,
+      telefone: json['telefone'] as String?,
       cep: json['cep'] as String?,
       endereco: json['endereco'] as String?,
       bairro: json['bairro'] as String?,
@@ -103,7 +103,7 @@ class Cliente {
 
   @override
   String toString() {
-    return 'Cliente($id, $nome, ${tipo.descricao}, $cpfCnpj, $email, $endereco, $numero, $cep, $bairro, $cidade, $uf)';
+    return 'Cliente($id, $nome, ${tipo.descricao}, $cpfCnpj, $email, $endereco, $telefone, $cep, $bairro, $cidade, $uf)';
   }
 
   String get cpfCnpjFormatado {

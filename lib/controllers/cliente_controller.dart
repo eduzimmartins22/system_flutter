@@ -142,7 +142,7 @@ class ClienteController {
         nome: cliente.nome,
         tipo: cliente.tipo,
         cpfCnpj: cliente.cpfCnpj,
-        numero: cliente.numero,
+        telefone: cliente.telefone,
         email: cliente.email,
       
         endereco: dadosCep['logradouro'] ?? cliente.endereco,
