@@ -2,7 +2,7 @@ class Usuario {
   final int id;
   final String nome;
   final String senha;
-  final DateTime? ultimaAlteracao;
+  late final DateTime? ultimaAlteracao;
 
   Usuario({
     required this.id,

@@ -54,7 +54,7 @@ class Produto {
       'qtdEstoque': qtdEstoque,
       'custo': custo,
       'precoVenda': precoVenda,
-      'Status': status == StatusProduto.ativo ? 1 : 0,
+      'Status': status == StatusProduto.ativo ? 0 : 1,
       'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
     }..removeWhere((key, value) => value == null);
   }
@@ -69,7 +69,7 @@ class Produto {
       ),
       qtdEstoque: (json['qtdEstoque'] as num).toDouble(),
       precoVenda: (json['precoVenda'] as num).toDouble(),
-      status: json['Status'] == 1 ? StatusProduto.ativo : StatusProduto.inativo,
+      status: json['Status'] == 0 ? StatusProduto.ativo : StatusProduto.inativo,
       custo: (json['custo'] as num?)?.toDouble(),
       codigoBarra: json['codigoBarra'] as String?,
       ultimaAlteracao: json['ultimaAlteracao'] != null

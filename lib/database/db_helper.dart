@@ -8,6 +8,8 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   static Database? _database;
+
+  static const int _newVersion = 2;
   
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -21,7 +23,7 @@ class DatabaseHelper {
       path = join(path, 'db_app-vendas.db');
       _database = await openDatabase(
         path,
-        version: 1,
+        version: _newVersion,
         onCreate: _onCreateDB,
         onUpgrade: _onUpgradeDB,
       ); 
@@ -34,6 +36,17 @@ class DatabaseHelper {
     await _insertInitialData(db);
   }
 
+  FutureOr<void> _onUpgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE usuarios ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE produtos ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE clientes ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE pedidos ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE pedido_itens ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE pedido_pagamentos ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+    }
+  }
+
   Future<void> _createTables(Database db) async {
     //usuario
     await db.execute('''
@@ -42,6 +55,7 @@ class DatabaseHelper {
         nome TEXT NOT NULL,
         senha TEXT NOT NULL,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         CONSTRAINT usuario_nome_unico UNIQUE (nome)
       )
     ''');
@@ -58,6 +72,7 @@ class DatabaseHelper {
         codigoBarra TEXT,
         Status INTEGER NOT NULL CHECK (Status IN (0, 1)),
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         CONSTRAINT estoque_positivo CHECK (qtdEstoque >= 0),
         CONSTRAINT produto_nome_unico UNIQUE (nome)
       );
@@ -79,6 +94,7 @@ class DatabaseHelper {
         cidade TEXT,
         uf TEXT,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         CONSTRAINT cpf_cnpj_unico UNIQUE (cpfCnpj),
         CONSTRAINT cpf_length CHECK (
           (tipo = 'F' AND LENGTH(cpfCnpj) = 11) OR
@@ -96,6 +112,7 @@ class DatabaseHelper {
         totalPedido REAL NOT NULL,
         dataCriacao TEXT NOT NULL,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (idCliente) REFERENCES clientes(id),
         FOREIGN KEY (idUsuario) REFERENCES usuarios(id)
       )
@@ -110,6 +127,7 @@ class DatabaseHelper {
         quantidade INTEGER NOT NULL,
         totalItem REAL NOT NULL,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (idPedido) REFERENCES pedidos(id),
         FOREIGN KEY (idProduto) REFERENCES produtos(id)
       )
@@ -122,20 +140,14 @@ class DatabaseHelper {
         idPedido INTEGER NOT NULL,
         valorPagamento REAL NOT NULL,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (idPedido) REFERENCES pedidos(id)
       )
     ''');
   }
 
-
-  FutureOr<void> _onUpgradeDB(Database db, int oldVersion, int newVersion) async{
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE produtos ADD COLUMN novo_campo TEXT');
-    }
-  }
-
   Future<void> _insertInitialData(Database db) async {
-    await db.insert('usuarios', {
+    /* await db.insert('usuarios', {
       'nome': 'breno',
       'senha': 'brenin',
     });
@@ -151,7 +163,7 @@ class DatabaseHelper {
     'unidade': 'Un',
     'qtdEstoque': 100,
     'precoVenda': 2.50,
-    'Status': 1,
+    'Status': 0,
     'custo': 1.00,
     'codigoBarra': '1234567890123',
   });
@@ -161,7 +173,7 @@ class DatabaseHelper {
     'unidade': 'Un',
     'qtdEstoque': 50,
     'precoVenda': 12.90,
-    'Status': 1,
+    'Status': 0,
     'custo': 7.50,
     'codigoBarra': '7894561230012',
   });
@@ -171,7 +183,7 @@ class DatabaseHelper {
     'unidade': 'Lt',
     'qtdEstoque': 30,
     'precoVenda': 8.00,
-    'Status': 1,
+    'Status': 0,
     'custo': 5.00,
     'codigoBarra': '0001112223334',
   });
@@ -181,7 +193,7 @@ class DatabaseHelper {
     'unidade': 'Cx',
     'qtdEstoque': 20,
     'precoVenda': 15.00,
-    'Status': 1,
+    'Status': 0,
     'custo': 9.00,
     'codigoBarra': '3216549870001',
   });
@@ -191,7 +203,7 @@ class DatabaseHelper {
     'unidade': 'Cx',
     'qtdEstoque': 40,
     'precoVenda': 25.00,
-    'Status': 1,
+    'Status': 0,
     'custo': 18.00,
     'codigoBarra': '1112223334445',
   });
@@ -252,6 +264,6 @@ class DatabaseHelper {
     'bairro': 'Centro',
     'cidade': 'Santos',
     'uf': 'SP',
-  });
-  }
+  });*/
+  } 
 }
