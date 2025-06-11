@@ -8,7 +8,11 @@ class ClienteController {
 
   Future<List<Cliente>> getClientes() async {
     final db = await _dbHelper.database;
-    final maps = await db.query('clientes');
+    final maps = await db.query(
+      'clientes',
+      where: 'deletado = ?',
+      whereArgs: [0],
+    );
     return maps.map((map) => Cliente.fromJson(map)).toList();
   }
 
@@ -20,8 +24,9 @@ class ClienteController {
       throw Exception('Já existe um cliente com este documento');
     }
     
-    final map = cliente.toJson();
-    map.remove('id');
+    final map = cliente.toJson()
+      ..remove('id')
+      ..['deletado'] = 0;
     
     return await db.insert('clientes', map);
   }
@@ -31,8 +36,8 @@ class ClienteController {
     
     final clientesComMesmoDoc = await db.query(
       'clientes',
-      where: 'cpfCnpj = ? AND id <> ?',
-      whereArgs: [cliente.cpfCnpj, cliente.id],
+      where: 'cpfCnpj = ? AND id <> ? AND deletado = ?',
+      whereArgs: [cliente.cpfCnpj, cliente.id, 0],
     );
     
     if (clientesComMesmoDoc.isNotEmpty) {
@@ -42,13 +47,24 @@ class ClienteController {
     final count = await db.update(
       'clientes',
       cliente.toJson(),
-      where: 'id = ?',
-      whereArgs: [cliente.id],
+      where: 'id = ? AND deletado = ?',
+      whereArgs: [cliente.id, 0],
     );
     return count > 0;
   }
 
   Future<bool> removerCliente(int id) async {
+    final db = await _dbHelper.database;
+    final count = await db.update(
+      'clientes',
+      {'deletado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return count > 0;
+  }
+
+  Future<bool> deletarCliente(int id) async {
     final db = await _dbHelper.database;
     final count = await db.delete(
       'clientes',
@@ -62,8 +78,8 @@ class ClienteController {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'clientes',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'id = ? AND deletado = ?',
+      whereArgs: [id, 0],
       limit: 1,
     );
     
@@ -77,8 +93,8 @@ class ClienteController {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'clientes',
-      where: 'cpfCnpj = ?',
-      whereArgs: [documento],
+      where: 'cpfCnpj = ? AND deletado = ?',
+      whereArgs: [documento, 0],
       limit: 1,
     );
     
@@ -91,11 +107,11 @@ class ClienteController {
   Future<bool> documentoExiste(String documento, [int? idExcluir]) async {
     final db = await _dbHelper.database;
     final where = idExcluir != null 
-        ? 'cpfCnpj = ? AND id <> ?' 
-        : 'cpfCnpj = ?';
+        ? 'cpfCnpj = ? AND id <> ? AND deletado = ?' 
+        : 'cpfCnpj = ? AND deletado = ?';
     final whereArgs = idExcluir != null 
-        ? [documento, idExcluir] 
-        : [documento];
+        ? [documento, idExcluir, 0] 
+        : [documento, 0];
     
     final maps = await db.query(
       'clientes',
@@ -107,7 +123,35 @@ class ClienteController {
     return maps.isNotEmpty;
   }
 
-  
+  Future<List<Cliente>> getClientesDeletados() async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'clientes',
+      where: 'deletado = ?',
+      whereArgs: [1],
+    );
+    return maps.map((map) => Cliente.fromJson(map)).toList();
+  }
+
+  Future<bool> restaurarCliente(int id) async {
+    final db = await _dbHelper.database;
+    final count = await db.update(
+      'clientes',
+      {'deletado': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return count > 0;
+  }
+
+  Future<int> contarClientes() async {
+    final db = await _dbHelper.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM clientes WHERE deletado = ?',
+      [0]
+    );
+    return result.first['count'] as int;
+  }
 
   Future<Map<String, dynamic>> consultarCep(String cep) async {
     try {
@@ -117,14 +161,9 @@ class ClienteController {
     }
   }
 
- 
   Future<int> adicionarClienteComCep(Cliente cliente, String cep) async {
     try {
-
       final dadosCep = await consultarCep(cep);
-      
-
-      
       return await adicionarCliente(cliente);
     } catch (e) {
       throw Exception('Erro ao adicionar cliente com CEP: ${e.toString()}');
@@ -133,10 +172,8 @@ class ClienteController {
 
   Future<bool> atualizarClienteComCep(Cliente cliente, String cep) async {
     try {
-    
       final dadosCep = await consultarCep(cep);
       
-      // Criar uma nova instância do cliente com os dados do endereço preenchidos
       final clienteComEndereco = Cliente(
         id: cliente.id,
         nome: cliente.nome,
@@ -144,7 +181,6 @@ class ClienteController {
         cpfCnpj: cliente.cpfCnpj,
         telefone: cliente.telefone,
         email: cliente.email,
-      
         endereco: dadosCep['logradouro'] ?? cliente.endereco,
         cidade: dadosCep['localidade'] ?? cliente.cidade,
         uf: dadosCep['uf'] ?? cliente.uf,
@@ -158,7 +194,6 @@ class ClienteController {
       throw Exception('Erro ao atualizar cliente com CEP: ${e.toString()}');
     }
   }
-
 
   Future<Map<String, String>> buscarEnderecoPorCep(String cep) async {
     try {
@@ -177,7 +212,6 @@ class ClienteController {
     }
   }
 
-  /// Valida se um CEP existe na API ViaCep
   Future<bool> validarCep(String cep) async {
     try {
       await consultarCep(cep);
