@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../controllers/configuracao_controller.dart';
 import '../../controllers/sync_controller.dart';
 
@@ -108,38 +109,62 @@ class _SyncPageState extends State<SyncPage> {
                     ),
                   ),
                 Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: _syncLogs.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'Nenhum log de sincronização disponível',
-                              style: TextStyle(color: Colors.grey),
+                  child: Column(
+                    children: [
+                      if (_syncLogs.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16.0),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton(
+                              icon: const Icon(Icons.copy),
+                              tooltip: 'Copiar logs',
+                              onPressed: () {
+                                final allLogs = _syncLogs.join('\n');
+                                Clipboard.setData(ClipboardData(text: allLogs));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Logs copiados para a área de transferência')),
+                                );
+                              },
                             ),
-                          )
-                        : ListView.builder(
-                            reverse: true, // Mostra os logs mais recentes primeiro
-                            itemCount: _syncLogs.length,
-                            itemBuilder: (context, index) {
-                              final log = _syncLogs.reversed.toList()[index];
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8.0, vertical: 4.0),
-                                child: Text(
-                                  log,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              );
-                            },
                           ),
+                        ),
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          child: _syncLogs.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'Nenhum log de sincronização disponível',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  reverse: true,
+                                  itemCount: _syncLogs.length,
+                                  itemBuilder: (context, index) {
+                                    final log = _syncLogs.reversed.toList()[index];
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8.0, vertical: 4.0),
+                                      child: Text(
+                                        log,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    );
+                                  },
+                                ),
                   ),
                 ),
               ],
             ),
+          ),
+        ],
+      ),
     );
   }
 }

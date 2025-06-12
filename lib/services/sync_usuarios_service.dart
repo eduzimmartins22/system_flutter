@@ -1,5 +1,6 @@
-import 'dart:convert';
+// ignore_for_file: collection_methods_unrelated_type
 
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../controllers/usuario_controller.dart';
 import '../models/usuario_model.dart';
@@ -9,16 +10,11 @@ class SyncUsuariosService {
 
   Future<void> sincronizar(String url, {Function(String)? onLog}) async {
     try {
-      onLog?.call('1. Enviando alterações locais para a API...');
+      onLog?.call('Iniciando sincronização de usuarios...');
       await enviarUsuariosAPI(url, onLog: onLog);
-      
-      onLog?.call('2. Deletando registros marcados como deletados localmente...');
       await deletarUsuariosAPI(url, onLog: onLog);
-      
-      onLog?.call('3. Buscando atualizações da API...');
       await buscarUsuariosAPI(url, onLog: onLog);
-      
-      onLog?.call('Sincronização de usuários concluída com sucesso');
+      onLog?.call('Usuarios sincronizados com sucesso');
     } catch (e) {
       onLog?.call('Erro durante a sincronização: $e');
       rethrow;
@@ -27,27 +23,51 @@ class SyncUsuariosService {
 
   Future<void> enviarUsuariosAPI(String url, {Function(String)? onLog}) async {
     final usuarios = await _usuarioController.getUsuarios();
-    onLog?.call('Encontrados ${usuarios.length} usuários locais para sincronizar');
+    if (usuarios.isEmpty) return;
+    
+    onLog?.call('Sincronizando ${usuarios.length} usuarios...');
 
     for (final usuario in usuarios) {
       try {
+        // Se o usuario tem última alteração, verificar qual versão é mais recente
+        if (usuario.ultimaAlteracao != null) {
+          try {
+            final response = await http.get(
+              Uri.parse('$url/usuarios/${usuario.id}'),
+              headers: {'Content-Type': 'application/json'},
+            );
+
+            if (response.statusCode == 200) {
+              final usuarioServidor = Usuario.fromJson(json.decode(response.body));
+              
+              // Comparar datas de alteração
+              if (usuarioServidor.ultimaAlteracao != null && 
+                  usuarioServidor.ultimaAlteracao!.isAfter(usuario.ultimaAlteracao!)) {
+                // Servidor tem versão mais recente - atualizar localmente
+                await _usuarioController.upsertUsuarioFromServer(usuarioServidor);
+                onLog?.call('Usuario ${usuario.id} atualizado localmente (versão do servidor mais recente)');
+                continue; // Pular para o próximo usuario
+              }
+            }
+          } catch (e) {
+            onLog?.call('Erro ao verificar usuario ${usuario.id} no servidor: $e');
+          }
+        }
+
+        // Se chegou aqui, ou o usuario não tem última alteração, ou a versão local é mais recente
         final usuarioJson = usuario.toJson();
         final body = json.encode(usuarioJson);
 
         http.Response response;
-        String operation;
+        final bool isNovoUsuario = usuario.ultimaAlteracao == null;
 
-        if (usuario.ultimaAlteracao == null) {
-          operation = 'criação';
-          onLog?.call('Enviando novo usuário (ID local: ${usuario.id})...');
+        if (isNovoUsuario) {
           response = await http.post(
             Uri.parse('$url/usuarios'),
             body: body,
             headers: {'Content-Type': 'application/json'},
           );
         } else {
-          operation = 'atualização';
-          onLog?.call('Atualizando usuário existente (ID: ${usuario.id})...');
           response = await http.put(
             Uri.parse('$url/usuarios/${usuario.id}'),
             body: body,
@@ -55,111 +75,101 @@ class SyncUsuariosService {
           );
         }
 
-        // Verifica se a resposta tem corpo
-        if (response.body.isEmpty) {
-          onLog?.call('Aviso: Resposta vazia na $operation do usuário ${usuario.id}');
-          continue;
-        }
+        if (response.body.isEmpty) continue;
 
         try {
-          final dynamic decoded = json.decode(response.body);
-          if (decoded is! Map<String, dynamic>) {
-            onLog?.call('Resposta não é um Map<String, dynamic>. Tipo recebido: ${decoded.runtimeType}');
-            return; // ou trate o erro conforme necessário
-          }
-          final responseBody = decoded;
-          
-          if (response.statusCode == 200 || response.statusCode == 201) {
-            final usuarioResponse = Usuario.fromJson(responseBody);
-            await _usuarioController.upsertUsuarioFromServer(usuarioResponse);
-            onLog?.call('Sucesso na $operation do usuário ${usuario.id}');
+          final decoded = json.decode(response.body) as Map<String, dynamic>;
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            await _usuarioController.upsertUsuarioFromServer(Usuario.fromJson(decoded));
           } else {
-            onLog?.call('Erro na $operation do usuário ${usuario.id}. Status: ${response.statusCode}');
-            onLog?.call('Resposta: ${response.body}');
+            onLog?.call('Falha no ${isNovoUsuario ? 'envio' : 'update'} do usuario ${usuario.id} | Status: ${response.statusCode}');
           }
         } catch (e) {
-          onLog?.call('Erro ao processar resposta na $operation do usuário ${usuario.id}: $e');
-          onLog?.call('Resposta bruta: ${response.body}');
+          onLog?.call('Erro processando resposta do usuario ${usuario.id}: $e');
         }
       } catch (e) {
-        onLog?.call('Erro na comunicação durante o envio do usuário ${usuario.id}: $e');
+        onLog?.call('Erro crítico no usuario ${usuario.id}: $e');
       }
     }
   }
 
   Future<void> deletarUsuariosAPI(String url, {Function(String)? onLog}) async {
     final usuariosDeletados = await _usuarioController.getUsuariosDeletados();
-    onLog?.call('Encontrados ${usuariosDeletados.length} usuários marcados para exclusão');
+    if (usuariosDeletados.isEmpty) return;
+
+    onLog?.call('Deletando ${usuariosDeletados.length} usuarios...');
 
     for (final usuario in usuariosDeletados) {
       try {
-        onLog?.call('Deletando usuário da API (ID: ${usuario.id})...');
-        final response = await http.delete(
-          Uri.parse('$url/usuarios/${usuario.id}'),
-        );
-
+        final response = await http.delete(Uri.parse('$url/usuarios/${usuario.id}'));
+        
         if (response.statusCode == 200) {
           await _usuarioController.deletarUsuario(usuario.id);
-          onLog?.call('Usuário deletado com sucesso (ID: ${usuario.id})');
+        } else {
+          onLog?.call('Falha ao deletar usuario ${usuario.id} | Status: ${response.statusCode}');
         }
       } catch (e) {
-        onLog?.call('Erro ao deletar usuário ${usuario.id} da API: $e');
+        onLog?.call('Erro crítico ao deletar usuario ${usuario.id}: $e');
       }
     }
   }
 
   Future<void> buscarUsuariosAPI(String url, {Function(String)? onLog}) async {
     try {
-      onLog?.call('Buscando usuários ativos da API...');
+      onLog?.call('Buscando atualizações para usuarios...');
       final response = await http.get(Uri.parse('$url/usuarios'));
 
-      onLog?.call('Status code: ${response.statusCode}');
-      onLog?.call('Response body: ${response.body}');
+      if (response.statusCode != 200) {
+        onLog?.call('Falha na busca | Status: ${response.statusCode}');
+        return;
+      }
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseBody = json.decode(response.body);
-        
-        // Verifica se a resposta contém a chave 'dados'
-        if (responseBody.containsKey('dados')) {
-          final List<dynamic> dados = responseBody['dados'];
-          
-          onLog?.call('Encontrados ${dados.length} usuários na resposta');
-          
-          // Obter todos os IDs da API
-          final Set<String> apiUserIds = dados.map((user) => user['id'].toString()).toSet();
-          
-          // Obter usuários locais que foram alterados (tem ultimaAlteracao)
-          final List<Usuario> localUsersWithChanges = await _usuarioController.getUsuariosComAlteracoes();
-          
-          onLog?.call('Encontrados ${localUsersWithChanges.length} usuários locais com alterações');
-          
-          // Verificar quais usuários locais não existem na API
-          for (final localUser in localUsersWithChanges) {
-            if (!apiUserIds.contains(localUser.id)) {
-              onLog?.call('Usuário local (ID: ${localUser.id}) não encontrado na API - marcando para exclusão local');
-              await _usuarioController.deletarUsuario(localUser.id);
-            }
+      final Map<String, dynamic> responseBody = json.decode(response.body);
+      
+      if (!responseBody.containsKey('dados')) {
+        onLog?.call('Resposta inválida da API: ausência de "dados"');
+        return;
+      }
+
+      final List<dynamic> dados = responseBody['dados'];
+      if (dados.isEmpty) return;
+      
+      final Set<String> apiUsuarioIds = dados.map((usuario) => usuario['id'].toString()).toSet();
+      final List<Usuario> localUsuariosWithChanges = await _usuarioController.getUsuariosComAlteracoes();
+
+      for (final localUsuario in localUsuariosWithChanges) {
+        if (!apiUsuarioIds.contains(localUsuario.id)) {
+          try {
+            await _usuarioController.deletarUsuario(localUsuario.id);
+          } catch (e) {
+            onLog?.call('Erro ao excluir localmente usuario ${localUsuario.id}: $e');
           }
-          
-          // Processar os usuários da API normalmente
-          for (var usuarioJson in dados) {
-            try {
-              // Converte cada usuário e trata campos nulos
-              final Usuario usuario = Usuario.fromJson(usuarioJson);
-              await _usuarioController.upsertUsuarioFromServer(usuario);
-              onLog?.call('Usuário ${usuario.id} processado com sucesso');
-            } catch (e) {
-              onLog?.call('Erro ao processar usuário: $e\nDados: $usuarioJson');
-            }
-          }
-        } else {
-          onLog?.call('Resposta da API não contém a chave "dados"');
         }
-      } else {
-        onLog?.call('Erro na resposta da API: ${response.statusCode}');
+      }
+
+      for (var usuarioJson in dados) {
+        try {
+          final usuarioServidor = Usuario.fromJson(usuarioJson);
+          final usuarioLocal = await _usuarioController.buscarPorId(usuarioServidor.id);
+          
+          // Se o usuario existe localmente e tem data de alteração, verificar qual é mais recente
+          if (usuarioLocal != null && usuarioLocal.ultimaAlteracao != null) {
+            if (usuarioServidor.ultimaAlteracao == null || 
+                usuarioLocal.ultimaAlteracao!.isAfter(usuarioServidor.ultimaAlteracao!)) {
+              // Versão local é mais recente - manter local
+              onLog?.call('Usuario ${usuarioServidor.id} mantido local (versão local mais recente)');
+              continue;
+            }
+          }
+          
+          // Atualizar com versão do servidor
+          await _usuarioController.upsertUsuarioFromServer(usuarioServidor);
+        } catch (e) {
+          onLog?.call('Erro processando usuario ${usuarioJson['id']}: $e');
+        }
       }
     } catch (e) {
-      onLog?.call('Erro ao buscar usuários da API: $e');
+      onLog?.call('Erro crítico na busca: $e');
       rethrow;
     }
   }

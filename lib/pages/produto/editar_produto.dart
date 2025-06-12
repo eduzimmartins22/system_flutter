@@ -34,7 +34,7 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
       unidade: UnidadeProduto.Un,
       qtdEstoque: 0,
       precoVenda: 0,
-      status: StatusProduto.ativo,
+      Status: StatusProduto.ativo,
     );
 
     _nomeController.text = _produto.nome;
@@ -43,7 +43,7 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
     _precoCustoController.text = _produto.custo?.toString() ?? '';
     _codigoBarrasController.text = _produto.codigoBarra ?? '';
     _unidadeSelecionada = _produto.unidade;
-    _statusSelecionado = _produto.status;
+    _statusSelecionado = _produto.Status;
   }
 
   @override
@@ -64,13 +64,14 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
         unidade: _unidadeSelecionada,
         qtdEstoque: double.parse(_quantidadeController.text),
         precoVenda: double.parse(_precoVendaController.text),
-        status: _statusSelecionado,
+        Status: _statusSelecionado,
         custo: _precoCustoController.text.isNotEmpty 
             ? double.parse(_precoCustoController.text) 
             : null,
         codigoBarra: _codigoBarrasController.text.isNotEmpty
             ? _codigoBarrasController.text
             : null,
+        ultimaAlteracao: widget.produto?.ultimaAlteracao,
       );
 
       bool sucesso;
@@ -78,6 +79,10 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
         await _controller.adicionarProduto(novoProduto);
         sucesso = true;
       } else {
+        if (widget.produto?.ultimaAlteracao != null) {
+          final now = DateTime.now().toIso8601String();
+          await _controller.atualizarDataAlteracao(novoProduto.id, now);
+        }
         sucesso = await _controller.atualizarProduto(novoProduto);
       }
 

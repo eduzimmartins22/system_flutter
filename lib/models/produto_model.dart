@@ -4,10 +4,10 @@ class Produto {
   final UnidadeProduto unidade;
   final double qtdEstoque;
   final double precoVenda;
-  final StatusProduto status;
+  final StatusProduto Status;
   final double? custo;
   final String? codigoBarra;
-  final DateTime? ultimaAlteracao;
+  late final DateTime? ultimaAlteracao;
   final int deletado;
 
   Produto({
@@ -16,7 +16,7 @@ class Produto {
     required this.unidade,
     required this.qtdEstoque,
     required this.precoVenda,
-    required this.status,
+    required this.Status,
     this.custo,
     this.codigoBarra,
     this.ultimaAlteracao,
@@ -29,7 +29,7 @@ class Produto {
     UnidadeProduto? unidade,
     double? qtdEstoque,
     double? precoVenda,
-    StatusProduto? status,
+    StatusProduto? Status,
     double? custo,
     String? codigoBarra,
     DateTime? ultimaAlteracao,
@@ -41,7 +41,7 @@ class Produto {
       unidade: unidade ?? this.unidade,
       qtdEstoque: qtdEstoque ?? this.qtdEstoque,
       precoVenda: precoVenda ?? this.precoVenda,
-      status: status ?? this.status,
+      Status: Status ?? this.Status,
       custo: custo ?? this.custo,
       codigoBarra: codigoBarra ?? this.codigoBarra,
       ultimaAlteracao: ultimaAlteracao ?? this.ultimaAlteracao,
@@ -58,7 +58,7 @@ class Produto {
       'qtdEstoque': qtdEstoque,
       'custo': custo,
       'precoVenda': precoVenda,
-      'Status': status == StatusProduto.ativo ? 0 : 1,
+      'Status': Status == StatusProduto.ativo ? 0 : 1,
       'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
       'deletado': deletado,
     }..removeWhere((key, value) => value == null);
@@ -74,7 +74,7 @@ class Produto {
       ),
       qtdEstoque: (json['qtdEstoque'] as num).toDouble(),
       precoVenda: (json['precoVenda'] as num).toDouble(),
-      status: json['Status'] == 0 ? StatusProduto.ativo : StatusProduto.inativo,
+      Status: json['Status'] == 0 ? StatusProduto.ativo : StatusProduto.inativo,
       custo: (json['custo'] as num?)?.toDouble(),
       codigoBarra: json['codigoBarra'] as String?,
       ultimaAlteracao: json['ultimaAlteracao'] != null
@@ -86,7 +86,7 @@ class Produto {
 
   @override
   String toString() {
-    return 'Produto($id, $nome, ${unidade.descricao}, $qtdEstoque, R\$$precoVenda, ${status.descricao})';
+    return 'Produto($id, $nome, ${unidade.descricao}, $qtdEstoque, R\$$precoVenda, ${Status.descricao})';
   }
 }
 

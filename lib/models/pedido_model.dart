@@ -65,7 +65,9 @@ class Pedido {
       idCliente: json['idCliente'] as int,
       idUsuario: json['idUsuario'] as int,
       totalPedido: (json['totalPedido'] as num).toDouble(),
-      dataCriacao: DateTime.parse(json['dataCriacao'] as String),
+      dataCriacao: json['dataCriacao'] != null
+        ? DateTime.parse(json['dataCriacao'] as String)
+        : DateTime.now(),
       ultimaAlteracao: json['ultimaAlteracao'] != null 
           ? DateTime.parse(json['ultimaAlteracao'] as String) 
           : null,
@@ -74,8 +76,12 @@ class Pedido {
           .map((item) => PedidoItem.fromJson(item as Map<String, dynamic>))
           .toList(),
       pagamentos: (json['pagamentos'] as List<dynamic>)
-          .map((pag) => PedidoPagamento.fromJson(pag as Map<String, dynamic>))
-          .toList(),
+          .map((pag) => PedidoPagamento(
+              id: pag['id'] as int,
+              idPedido: pag['idPedido'] as int,
+              valor: (pag['valor'] as num).toDouble(),
+            ))
+        .toList(),
     );
   }
 }
@@ -84,7 +90,7 @@ class PedidoItem {
   final int id;
   final int idPedido;
   final int idProduto;
-  final int quantidade;
+  final double quantidade;
   final double totalItem;
 
   PedidoItem({
@@ -110,7 +116,7 @@ class PedidoItem {
       id: json['id'] as int,
       idPedido: json['idPedido'] as int,
       idProduto: json['idProduto'] as int,
-      quantidade: json['quantidade'] as int,
+      quantidade: json['quantidade'] as double,
       totalItem: (json['totalItem'] as num).toDouble(),
     );
   }

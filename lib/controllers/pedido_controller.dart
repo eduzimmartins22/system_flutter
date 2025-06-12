@@ -122,7 +122,7 @@ class PedidoController {
       );
 
       for (final item in itens) {
-        await _adicionarAoEstoque(txn, item['idProduto'] as int, item['quantidade'] as int);
+        await _adicionarAoEstoque(txn, item['idProduto'] as int, item['quantidade'] as double);
       }
 
       return true;
@@ -263,7 +263,7 @@ class PedidoController {
     return pagamentos.fold(0, (sum, pag) => sum + pag.valor);
   }
 
-  Future<void> _atualizarEstoque(Transaction txn, int produtoId, int quantidadeVendida) async {
+  Future<void> _atualizarEstoque(Transaction txn, int produtoId, double quantidadeVendida) async {
     // Busca produto atual
     final produto = await txn.query(
       'produtos',
@@ -337,7 +337,7 @@ class PedidoController {
     });
   }
 
-  Future<void> _adicionarAoEstoque(Transaction txn, int produtoId, int quantidade) async {
+  Future<void> _adicionarAoEstoque(Transaction txn, int produtoId, double quantidade) async {
     final produto = await txn.query(
       'produtos',
       where: 'id = ?',
@@ -433,7 +433,7 @@ class PedidoController {
       );
 
       for (final item in itens) {
-        await _atualizarEstoque(txn, item['idProduto'] as int, item['quantidade'] as int);
+        await _atualizarEstoque(txn, item['idProduto'] as int, item['quantidade'] as double);
       }
 
       return true;

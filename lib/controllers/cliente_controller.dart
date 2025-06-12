@@ -220,4 +220,29 @@ class ClienteController {
       return false;
     }
   }
+
+  Future<void> upsertClienteFromServer(Cliente cliente) async {
+    final db = await _dbHelper.database;
+    final existing = await buscarPorId(cliente.id);
+    
+    if (existing != null) {
+      await db.update(
+        'clientes',
+        cliente.toJson(),
+        where: 'id = ?',
+        whereArgs: [cliente.id],
+      );
+    } else {
+      await db.insert('clientes', cliente.toJson());
+    }
+  }
+
+  Future<List<Cliente>> getClientesComAlteracoes() async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'clientes',
+      where: 'ultimaAlteracao IS NOT NULL',
+    );
+    return List.generate(maps.length, (i) => Cliente.fromJson(maps[i]));
+  }
 }
