@@ -9,7 +9,7 @@ class PedidoController {
     final db = await _dbHelper.database;
     
     return await db.transaction((txn) async {
-      // pedido principal
+      // Pedido principal - sem ultimaAlteracao inicialmente
       final pedidoId = await txn.insert('pedidos', {
         'idCliente': pedido.idCliente,
         'idUsuario': pedido.idUsuario,
@@ -19,7 +19,7 @@ class PedidoController {
         'deletado': 0,
       });
 
-      // itens do pedido
+      // Itens do pedido
       for (final item in pedido.itens) {
         await txn.insert('pedido_itens', {
           'idPedido': pedidoId,
@@ -29,12 +29,9 @@ class PedidoController {
           'ultimaAlteracao': null,
           'deletado': 0,
         });
-
-        // atualiza estoque do produto
-        await _atualizarEstoque(txn, item.idProduto, item.quantidade);
       }
 
-      // pagamentos do pedido
+      // Pagamentos do pedido
       for (final pagamento in pedido.pagamentos) {
         await txn.insert('pedido_pagamentos', {
           'idPedido': pedidoId,
@@ -53,7 +50,7 @@ class PedidoController {
     final pedidos = await db.query(
       'pedidos',
       where: 'deletado = ?',
-      whereArgs: [0], // 0 = não deletado
+      whereArgs: [0],
     );
     
     return Future.wait(pedidos.map((pedidoMap) async {
@@ -84,127 +81,25 @@ class PedidoController {
     }));
   }
 
-  Future<bool> removerPedido(int id) async {
-    final db = await _dbHelper.database;
-    
-    return await db.transaction((txn) async {
-      // 1. Marca o pedido como deletado
-      final countPedido = await txn.update(
-        'pedidos',
-        {'deletado': 1, 'ultimaAlteracao': DateTime.now().toIso8601String()},
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-
-      if (countPedido == 0) return false;
-
-      // 2. Marca os itens do pedido como deletados
-      await txn.update(
-        'pedido_itens',
-        {'deletado': 1, 'ultimaAlteracao': DateTime.now().toIso8601String()},
-        where: 'idPedido = ?',
-        whereArgs: [id],
-      );
-
-      // 3. Marca os pagamentos do pedido como deletados
-      await txn.update(
-        'pedido_pagamentos',
-        {'deletado': 1, 'ultimaAlteracao': DateTime.now().toIso8601String()},
-        where: 'idPedido = ?',
-        whereArgs: [id],
-      );
-
-      // 4. Devolve os itens ao estoque
-      final itens = await txn.query(
-        'pedido_itens',
-        where: 'idPedido = ?',
-        whereArgs: [id],
-      );
-
-      for (final item in itens) {
-        await _adicionarAoEstoque(txn, item['idProduto'] as int, item['quantidade'] as double);
-      }
-
-      return true;
-    });
-  }
-
-  Future<bool> deletarPedido(int id) async {
-    final db = await _dbHelper.database;
-    
-    return await db.transaction((txn) async {
-      // 1. Remove os pagamentos do pedido
-      await txn.delete(
-        'pedido_pagamentos',
-        where: 'idPedido = ?',
-        whereArgs: [id],
-      );
-
-      // 2. Remove os itens do pedido
-      await txn.delete(
-        'pedido_itens',
-        where: 'idPedido = ?',
-        whereArgs: [id],
-      );
-
-      // 3. Remove o pedido principal
-      final count = await txn.delete(
-        'pedidos',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-
-      return count > 0;
-    });
-  }
-
   Future<bool> atualizarPedidoCompleto(Pedido pedido) async {
     final db = await _dbHelper.database;
     
     try {
-      final itensOriginais = (await db.query(
-        'pedido_itens',
-        where: 'idPedido = ?',
-        whereArgs: [pedido.id],
-      )).map((e) => PedidoItem.fromJson(e)).toList();
-
-      final itensRemovidos = itensOriginais.where(
-        (original) => !pedido.itens.any((novo) => novo.idProduto == original.idProduto)
-      ).toList();
-
       await db.transaction((txn) async {
-        // Devolve ao estoque os itens removidos
-        for (final item in itensRemovidos) {
-          await _adicionarAoEstoque(txn, item.idProduto, item.quantidade);
-        }
+        // Atualiza pedido principal
+        await txn.update(
+          'pedidos',
+          {
+            'idCliente': pedido.idCliente,
+            'totalPedido': pedido.totalPedido,
+            'ultimaAlteracao': pedido.ultimaAlteracao?.toIso8601String() ?? 
+                DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [pedido.id],
+        );
 
-        // Atualiza pedido principal - SOMENTE se não veio do servidor
-        if (pedido.ultimaAlteracao == null) {
-          await txn.update(
-            'pedidos',
-            {
-              'idCliente': pedido.idCliente,
-              'totalPedido': pedido.totalPedido,
-              'ultimaAlteracao': pedido.ultimaAlteracao?.toIso8601String(),
-            },
-            where: 'id = ?',
-            whereArgs: [pedido.id],
-          );
-        } else {
-          // Se veio do servidor, mantém a data original
-          await txn.update(
-            'pedidos',
-            {
-              'idCliente': pedido.idCliente,
-              'totalPedido': pedido.totalPedido,
-              'ultimaAlteracao': pedido.ultimaAlteracao!.toIso8601String(),
-            },
-            where: 'id = ?',
-            whereArgs: [pedido.id],
-          );
-        }
-
-        // Remove e recria itens com data apropriada
+        // Remove e recria itens
         await txn.delete(
           'pedido_itens',
           where: 'idPedido = ?',
@@ -221,11 +116,9 @@ class PedidoController {
                 DateTime.now().toIso8601String(),
             'deletado': 0,
           });
-
-          await _atualizarEstoqueEmEdicao(txn, item);
         }
 
-        // Remove e recria pagamentos com data apropriada
+        // Remove e recria pagamentos
         await txn.delete(
           'pedido_pagamentos',
           where: 'idPedido = ?',
@@ -248,133 +141,72 @@ class PedidoController {
     }
   }
 
-  Future<bool> validarPedido(Pedido pedido) async {
-    if (pedido.itens.isEmpty || pedido.pagamentos.isEmpty) {
-      return false;
-    }
-
-    final totalItens = _calcularTotalItens(pedido.itens);
-    final totalPagamentos = _calcularTotalPagamentos(pedido.pagamentos);
-
+  Future<bool> removerPedido(int id) async {
     final db = await _dbHelper.database;
-    for (final item in pedido.itens) {
-      final produto = await db.query(
-        'produtos',
-        where: 'id = ?',
-        whereArgs: [item.idProduto],
-        limit: 1,
-      );
-      
-      if (produto.isEmpty || (produto.first['qtdEstoque'] as double) < item.quantidade) {
-        return false;
-      }
-    }
-
-    return (totalItens - totalPagamentos).abs() < 0.01;
-  }
-
-  double _calcularTotalItens(List<PedidoItem> itens) {
-    return itens.fold(0, (sum, item) => sum + item.totalItem);
-  }
-
-  double _calcularTotalPagamentos(List<PedidoPagamento> pagamentos) {
-    return pagamentos.fold(0, (sum, pag) => sum + pag.valor);
-  }
-
-  Future<void> _atualizarEstoque(Transaction txn, int produtoId, double quantidadeVendida) async {
-    // Busca produto atual
-    final produto = await txn.query(
-      'produtos',
-      where: 'id = ?',
-      whereArgs: [produtoId],
-      limit: 1,
-    );
-
-    if (produto.isNotEmpty) {
-      final estoqueAtual = produto.first['qtdEstoque'] as double;
-      final novoEstoque = estoqueAtual - quantidadeVendida;
-      
-      // Atualiza estoque
-      await txn.update(
-        'produtos',
+    
+    return await db.transaction((txn) async {
+      // Marca o pedido e seus relacionamentos como deletados
+      final countPedido = await txn.update(
+        'pedidos',
         {
-          'qtdEstoque': novoEstoque,
-          'ultimaAlteracao': DateTime.now().toIso8601String(),
+          'deletado': 1, 
+          'ultimaAlteracao': DateTime.now().toIso8601String()
         },
         where: 'id = ?',
-        whereArgs: [produtoId],
-      );
-    }
-  }
-
-  Future<void> _atualizarEstoqueEmEdicao(Transaction txn, PedidoItem novoItem) async {
-    final itensOriginais = await txn.query(
-      'pedido_itens',
-      where: 'idPedido = ? AND idProduto = ?',
-      whereArgs: [novoItem.idPedido, novoItem.idProduto],
-    );
-
-    int quantidadeOriginal = 0;
-    if (itensOriginais.isNotEmpty) {
-      quantidadeOriginal = itensOriginais.first['quantidade'] as int;
-    }
-
-    final diferencaQuantidade = quantidadeOriginal - novoItem.quantidade;
-
-    if (diferencaQuantidade != 0) {
-      final produto = await txn.query(
-        'produtos',
-        where: 'id = ?',
-        whereArgs: [novoItem.idProduto],
-        limit: 1,
+        whereArgs: [id],
       );
 
-      if (produto.isNotEmpty) {
-        final estoqueAtual = produto.first['qtdEstoque'] as double;
-        final novoEstoque = estoqueAtual + diferencaQuantidade;
-        
-        await txn.update(
-          'produtos',
-          {
-            'qtdEstoque': novoEstoque,
-            'ultimaAlteracao': DateTime.now().toIso8601String(),
-          },
-          where: 'id = ?',
-          whereArgs: [novoItem.idProduto],
-        );
-      }
-    }
-  }
+      if (countPedido == 0) return false;
 
-  Future<void> devolverItensAoEstoque(List<PedidoItem> itensRemovidos) async {
-    final db = await _dbHelper.database;
-    await db.transaction((txn) async {
-      for (final item in itensRemovidos) {
-        await _adicionarAoEstoque(txn, item.idProduto, item.quantidade);
-      }
+      await txn.update(
+        'pedido_itens',
+        {
+          'deletado': 1, 
+          'ultimaAlteracao': DateTime.now().toIso8601String()
+        },
+        where: 'idPedido = ?',
+        whereArgs: [id],
+      );
+
+      await txn.update(
+        'pedido_pagamentos',
+        {
+          'deletado': 1, 
+          'ultimaAlteracao': DateTime.now().toIso8601String()
+        },
+        where: 'idPedido = ?',
+        whereArgs: [id],
+      );
+
+      return true;
     });
   }
 
-  Future<void> _adicionarAoEstoque(Transaction txn, int produtoId, double quantidade) async {
-    final produto = await txn.query(
-      'produtos',
-      where: 'id = ?',
-      whereArgs: [produtoId],
-      limit: 1,
-    );
-
-    if (produto.isNotEmpty) {
-      final estoqueAtual = produto.first['qtdEstoque'] as double;
-      await txn.update(
-        'produtos',
-        {
-          'qtdEstoque': estoqueAtual + quantidade,
-          'ultimaAlteracao': DateTime.now().toIso8601String(),
-        },
-        where: 'id = ?',
-        whereArgs: [produtoId],
+  Future<bool> deletarPedido(int id) async {
+    final db = await _dbHelper.database;
+    
+    return await db.transaction((txn) async {
+      // Remove completamente o pedido e seus relacionamentos
+      await txn.delete(
+        'pedido_pagamentos',
+        where: 'idPedido = ?',
+        whereArgs: [id],
       );
-    }
+
+      await txn.delete(
+        'pedido_itens',
+        where: 'idPedido = ?',
+        whereArgs: [id],
+      );
+
+      final count = await txn.delete(
+        'pedidos',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      return count > 0;
+    });
   }
 
   Future<List<Pedido>> listarPedidosDeletados() async {
@@ -382,7 +214,7 @@ class PedidoController {
     final pedidos = await db.query(
       'pedidos',
       where: 'deletado = ?',
-      whereArgs: [1], // 1 = deletado
+      whereArgs: [1],
     );
     
     return Future.wait(pedidos.map((pedidoMap) async {
@@ -417,44 +249,71 @@ class PedidoController {
     final db = await _dbHelper.database;
     
     return await db.transaction((txn) async {
-      // 1. Restaura o pedido principal
+      // Restaura o pedido e seus relacionamentos
       final countPedido = await txn.update(
         'pedidos',
-        {'deletado': 0, 'ultimaAlteracao': DateTime.now().toIso8601String()},
+        {
+          'deletado': 0, 
+          'ultimaAlteracao': DateTime.now().toIso8601String()
+        },
         where: 'id = ?',
         whereArgs: [id],
       );
 
       if (countPedido == 0) return false;
 
-      // 2. Restaura os itens do pedido
       await txn.update(
         'pedido_itens',
-        {'deletado': 0, 'ultimaAlteracao': DateTime.now().toIso8601String()},
+        {
+          'deletado': 0, 
+          'ultimaAlteracao': DateTime.now().toIso8601String()
+        },
         where: 'idPedido = ?',
         whereArgs: [id],
       );
 
-      // 3. Restaura os pagamentos do pedido
       await txn.update(
         'pedido_pagamentos',
-        {'deletado': 0, 'ultimaAlteracao': DateTime.now().toIso8601String()},
+        {
+          'deletado': 0, 
+          'ultimaAlteracao': DateTime.now().toIso8601String()
+        },
         where: 'idPedido = ?',
         whereArgs: [id],
       );
-
-      // 4. Remove os itens do estoque (inverso do que foi feito no soft delete)
-      final itens = await txn.query(
-        'pedido_itens',
-        where: 'idPedido = ?',
-        whereArgs: [id],
-      );
-
-      for (final item in itens) {
-        await _atualizarEstoque(txn, item['idProduto'] as int, item['quantidade'] as double);
-      }
 
       return true;
     });
+  }
+
+  Future<bool> validarPedido(Pedido pedido) async {
+    if(pedido.itens.isEmpty || pedido.pagamentos.isEmpty) {
+      return false;
+    }
+    
+    // Valida totais
+    final totalItens = _calcularTotalItens(pedido.itens);
+    final totalPagamentos = _calcularTotalPagamentos(pedido.pagamentos);
+
+    if (totalItens <= 0) {
+      return false;
+    }
+    if (totalPagamentos <= 0) {
+      return false;
+    }
+    if (totalItens != pedido.totalPedido) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Métodos auxiliares simplificados
+  double _calcularTotalItens(List<PedidoItem> itens) {
+    return itens.fold(0, (sum, item) => sum + item.totalItem);
+  }
+
+  double _calcularTotalPagamentos(List<PedidoPagamento> pagamentos) {
+    return pagamentos.fold(0, (sum, pag) => sum + pag.valor);
   }
 }

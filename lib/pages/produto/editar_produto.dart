@@ -130,7 +130,7 @@ Widget build(BuildContext context) {
               },
               decoration: const InputDecoration(labelText: 'Unidade'),
               validator: (value) {
-                if (value == null || value == UnidadeProduto.Un) {
+                if (value == null) {
                   return 'Por favor, selecione uma unidade válida';
                 }
                 return null;

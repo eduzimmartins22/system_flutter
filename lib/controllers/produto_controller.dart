@@ -19,7 +19,7 @@ class ProdutoController {
     final maps = await db.query(
       'produtos',
       where: 'Status = ? AND deletado = ?',
-      whereArgs: [1, 0],
+      whereArgs: [0, 0],
     );
     return maps.map((map) => Produto.fromJson(map)).toList();
   }

@@ -59,14 +59,11 @@ class SyncPedidosService {
         final pedidoJson = pedidoParaEnvio.toJson();
         final body = json.encode(pedidoJson);
 
-        onLog?.call('pedido ID:${pedido.id} -> $body');
         final response = await http.post(
           Uri.parse('$url/pedidos'),
           body: body,
           headers: {'Content-Type': 'application/json'},
         );
-
-        onLog?.call('response -> $body');
 
         if (response.body.isEmpty) continue;
 
