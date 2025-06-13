@@ -136,7 +136,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                   }
                 },
                 decoration: const InputDecoration(
-                  labelText: 'Tipo de Cliente *',
+                  labelText: 'Tipo de Cliente ',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -144,7 +144,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
               TextFormField(
                 controller: _nomeController,
                 decoration: const InputDecoration(
-                  labelText: 'Nome *',
+                  labelText: 'Nome ',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
@@ -154,7 +154,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
               TextFormField(
                 controller: _cpfCnpjController,
                 decoration: InputDecoration(
-                  labelText: _tipoSelecionado == TipoCliente.fisica ? 'CPF *' : 'CNPJ *',
+                  labelText: _tipoSelecionado == TipoCliente.fisica ? 'CPF ' : 'CNPJ ',
                   border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
@@ -309,6 +309,10 @@ class _EditarClientePageState extends State<EditarClientePage> {
     );
   }
 }
+
+
+
+
 
 class BuscarCepButton extends StatefulWidget {
   final TextEditingController cepController;

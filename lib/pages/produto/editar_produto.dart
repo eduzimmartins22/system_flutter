@@ -87,160 +87,193 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isEdicao = widget.produto != null;
+@override
+Widget build(BuildContext context) {
+  final isEdicao = widget.produto != null;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isEdicao ? 'Editar Produto' : 'Novo Produto'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _nomeController,
-                decoration: const InputDecoration(labelText: 'Nome do Produto'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o nome do produto';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<UnidadeProduto>(
-                value: _unidadeSelecionada,
-                items: UnidadeProduto.values.map((unidade) {
-                  return DropdownMenuItem(
-                    value: unidade,
-                    child: Text(unidade.descricao),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _unidadeSelecionada = value;
-                    });
-                  }
-                },
-                decoration: const InputDecoration(labelText: 'Unidade'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _quantidadeController,
-                decoration: const InputDecoration(labelText: 'Quantidade em Estoque'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira a quantidade';
-                  }
-                  if (double.tryParse(value) == null) {
-                    return 'Por favor, insira um número válido';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _precoVendaController,
-                decoration: const InputDecoration(labelText: 'Preço de Venda'),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o preço de venda';
-                  }
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(isEdicao ? 'Editar Produto' : 'Novo Produto'),
+    ),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _nomeController,
+              decoration: const InputDecoration(labelText: 'Nome do Produto'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor, insira o nome do produto';
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<UnidadeProduto>(
+              value: _unidadeSelecionada,
+              items: UnidadeProduto.values.map((unidade) {
+                return DropdownMenuItem(
+                  value: unidade,
+                  child: Text(unidade.descricao),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _unidadeSelecionada = value;
+                  });
+                }
+              },
+              decoration: const InputDecoration(labelText: 'Unidade'),
+              validator: (value) {
+                if (value == null || value == UnidadeProduto.Un) {
+                  return 'Por favor, selecione uma unidade válida';
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _quantidadeController,
+              decoration: const InputDecoration(labelText: 'Quantidade em Estoque'),
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor, insira a quantidade';
+                }
+                final parsed = double.tryParse(value);
+                if (parsed == null || parsed <= 0) {
+                  return 'Insira um número maior que zero';
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _precoVendaController,
+              decoration: const InputDecoration(labelText: 'Preço de Venda'),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor, insira o preço de venda';
+                }
+                final parsed = double.tryParse(value.replaceAll(',', '.'));
+                if (parsed == null || parsed <= 0) {
+                  return 'Insira um valor numérico válido';
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _precoCustoController,
+              decoration: const InputDecoration(labelText: 'Preço de Custo'),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+               validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor, insira o preço de venda';
+                }
+                final parsed = double.tryParse(value.replaceAll(',', '.'));
+                if (parsed == null || parsed <= 0) {
+                  return 'Insira um valor numérico válido';
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _codigoBarrasController,
+              decoration: const InputDecoration(labelText: 'Código de Barras'),
+              keyboardType: TextInputType.text,
+              validator: (value) {
+                if (value != null && value.isNotEmpty) {
                   if (double.tryParse(value) == null) {
                     return 'Por favor, insira um valor válido';
                   }
-                  return null;
-                },
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<StatusProduto>(
+              value: _statusSelecionado,
+              items: StatusProduto.values.map((status) {
+                return DropdownMenuItem(
+                  value: status,
+                  child: Text(status.descricao),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _statusSelecionado = value;
+                  });
+                }
+              },
+              decoration: const InputDecoration(labelText: 'Status'),
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 50,
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _salvarProduto,
+                child: const Text('Salvar'),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _precoCustoController,
-                decoration: const InputDecoration(labelText: 'Preço de Custo (opcional)'),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _codigoBarrasController,
-                decoration: const InputDecoration(labelText: 'Código de Barras (opcional)'),
-                keyboardType: TextInputType.text,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<StatusProduto>(
-                value: _statusSelecionado,
-                items: StatusProduto.values.map((status) {
-                  return DropdownMenuItem(
-                    value: status,
-                    child: Text(status.descricao),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _statusSelecionado = value;
-                    });
-                  }
-                },
-                decoration: const InputDecoration(labelText: 'Status'),
-              ),
+            ),
+            if (isEdicao) ...[
               const SizedBox(height: 16),
               SizedBox(
-                height: 50,
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _salvarProduto,
-                  child: const Text('Salvar'),
+                  onPressed: () async {
+                    final confirmado = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Confirmar Exclusão'),
+                        content: const Text('Deseja realmente excluir este produto?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancelar'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Excluir'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmado == true) {
+                      final sucesso = await _controller.removerProduto(_produto.id);
+                      if (sucesso) {
+                        Navigator.pop(context, true);
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Excluir Produto'),
                 ),
               ),
-              if (isEdicao) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final confirmado = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Confirmar Exclusão'),
-                          content: const Text('Deseja realmente excluir este produto?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancelar'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text('Excluir'),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirmado == true) {
-                        final sucesso = await _controller.removerProduto(_produto.id);
-                        if (sucesso) {
-                          Navigator.pop(context, true);
-                        }
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Excluir Produto'),
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

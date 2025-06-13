@@ -80,7 +80,6 @@ class _LoginPageState extends State<LoginPage> {
         SnackBar(content: Text('Erro ao fazer login: ${e.toString()}')),
       );
     } finally {
-      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
