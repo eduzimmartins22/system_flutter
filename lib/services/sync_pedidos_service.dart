@@ -24,39 +24,14 @@ class SyncPedidosService {
   Future<void> enviarPedidosAPI(String url, {Function(String)? onLog}) async {
     final pedidos = await _pedidoController.listarPedidosCompletos();
     if (pedidos.isEmpty) return;
-
+    
     onLog?.call('Sincronizando ${pedidos.length} pedidos...');
 
     for (final pedido in pedidos) {
       try {
-        if (pedido.id != 0 && pedido.ultimaAlteracao != null) {
-          try {
-            final response = await http.get(
-              Uri.parse('$url/pedidos/${pedido.id}'),
-              headers: {'Content-Type': 'application/json'},
-            );
+        if (pedido.deletado == 1) continue;
 
-            if (response.statusCode == 200) {
-              final pedidoServidor = Pedido.fromJson(
-                json.decode(response.body),
-              );
-
-              if (pedidoServidor.ultimaAlteracao != null &&
-                  pedidoServidor.ultimaAlteracao!.isAfter(pedido.ultimaAlteracao!)) {
-                await _pedidoController.atualizarPedidoCompleto(pedidoServidor);
-                continue;
-              }
-            }
-          } catch (e) {
-            onLog?.call('Erro ao verificar pedido ${pedido.id} no servidor: $e');
-          }
-        }
-
-        final pedidoParaEnvio = pedido.copyWith(
-          ultimaAlteracao: pedido.id == 0 ? null : pedido.ultimaAlteracao
-        );
-        
-        final pedidoJson = pedidoParaEnvio.toJson();
+        final Map<String, dynamic> pedidoJson = _pedidoController.formatarParaServidor(pedido);
         final body = json.encode(pedidoJson);
 
         final response = await http.post(
@@ -65,18 +40,21 @@ class SyncPedidosService {
           headers: {'Content-Type': 'application/json'},
         );
 
-        if (response.body.isEmpty) continue;
-
-        try {
-          final decoded = json.decode(response.body) as Map<String, dynamic>;
-          if (response.statusCode >= 200 && response.statusCode < 300) {
-            final pedidoAtualizado = Pedido.fromJson(decoded);
-            await _pedidoController.atualizarPedidoCompleto(pedidoAtualizado);
-          } else {
-            onLog?.call('Falha no envio do pedido ${pedido.id} | Status: ${response.statusCode}');
+        // Tratamento detalhado da resposta
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          if (response.body.isNotEmpty) {
+            try {
+              final decoded = json.decode(response.body);
+              await _pedidoController.upsertPedidoFromServer(Pedido.fromJson(decoded));
+            } catch (e) {
+              onLog?.call('Erro ao processar resposta: $e');
+            }
           }
-        } catch (e) {
-          onLog?.call('Erro processando resposta do pedido ${pedido.id}: $e');
+        } else {
+          onLog?.call('''
+          Falha ao sincronizar pedido ${pedido.id} 
+          Status: ${response.statusCode}
+          Resposta: ${response.body}''');
         }
       } catch (e) {
         onLog?.call('Erro crítico no pedido ${pedido.id}: $e');
@@ -92,16 +70,12 @@ class SyncPedidosService {
 
     for (final pedido in pedidosDeletados) {
       try {
-        final response = await http.delete(
-          Uri.parse('$url/pedidos/${pedido.id}'),
-        );
-
+        final response = await http.delete(Uri.parse('$url/pedidos/${pedido.id}'));
+        
         if (response.statusCode == 200) {
           await _pedidoController.deletarPedido(pedido.id);
         } else {
-          onLog?.call(
-            'Falha ao deletar pedido ${pedido.id} | Status: ${response.statusCode}',
-          );
+          onLog?.call('Falha ao deletar pedido ${pedido.id} | Status: ${response.statusCode}');
         }
       } catch (e) {
         onLog?.call('Erro crítico ao deletar pedido ${pedido.id}: $e');
@@ -119,44 +93,45 @@ class SyncPedidosService {
         return;
       }
 
-      final responseBody = json.decode(response.body);
-      List<dynamic> dados;
+      final Map<String, dynamic> responseBody = json.decode(response.body);
       
-      if (responseBody is Map && responseBody.containsKey('dados')) {
-        dados = responseBody['dados'] as List<dynamic>;
-      } else {
-        onLog?.call('Formato de resposta inesperado: $responseBody');
+      if (!responseBody.containsKey('dados')) {
+        onLog?.call('Resposta inválida da API: ausência de "dados"');
         return;
       }
 
+      final List<dynamic> dados = responseBody['dados'];
       if (dados.isEmpty) return;
       
+      final Set<String> apiPedidoIds = dados.map((pedido) => pedido['id'].toString()).toSet();
+      
+      final List<Pedido> pedidosLocais = await _pedidoController.listarPedidosCompletos();
+      
+      for (final pedidoLocal in pedidosLocais) {
+        if (pedidoLocal.ultimaAlteracao != null && !apiPedidoIds.contains(pedidoLocal.id)) {
+          try {
+            await _pedidoController.deletarPedido(pedidoLocal.id);
+          } catch (e) {
+            onLog?.call('Erro ao excluir localmente pedido ${pedidoLocal.id}: $e');
+          }
+        }
+      }
+
       for (var pedidoJson in dados) {
         try {
           final pedidoServidor = Pedido.fromJson(pedidoJson);
-          Pedido? pedidoLocal;
-          
-          try {
-            pedidoLocal = (await _pedidoController.listarPedidosCompletos())
-                .firstWhere((p) => p.id == pedidoServidor.id);
-          } catch (e) {
-            pedidoLocal = null;
-          }
+          final pedidoLocal = await _pedidoController.getPedidoById(pedidoServidor.id);
           
           if (pedidoLocal != null && pedidoLocal.ultimaAlteracao != null) {
             if (pedidoServidor.ultimaAlteracao == null || 
-              pedidoLocal.ultimaAlteracao!.isAfter(pedidoServidor.ultimaAlteracao!)) {
+                pedidoLocal.ultimaAlteracao!.isAfter(pedidoServidor.ultimaAlteracao!)) {
               continue;
             }
           }
           
-          if (pedidoLocal == null) {
-            await _pedidoController.criarPedidoCompleto(pedidoServidor);
-          } else {
-            await _pedidoController.atualizarPedidoCompleto(pedidoServidor);
-          }
+          await _pedidoController.upsertPedidoFromServer(pedidoServidor);
         } catch (e) {
-          onLog?.call('Erro processando pedido ${pedidoJson['id']}: $e');
+          onLog?.call('Erro processando pedido ${pedidoJson['id']}: $e | JSON: $pedidoJson');
         }
       }
     } catch (e) {

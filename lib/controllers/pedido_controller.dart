@@ -1,4 +1,3 @@
-import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/pedido_model.dart';
 
@@ -9,7 +8,6 @@ class PedidoController {
     final db = await _dbHelper.database;
     
     return await db.transaction((txn) async {
-      // Pedido principal - sem ultimaAlteracao inicialmente
       final pedidoId = await txn.insert('pedidos', {
         'idCliente': pedido.idCliente,
         'idUsuario': pedido.idUsuario,
@@ -19,7 +17,6 @@ class PedidoController {
         'deletado': 0,
       });
 
-      // Itens do pedido
       for (final item in pedido.itens) {
         await txn.insert('pedido_itens', {
           'idPedido': pedidoId,
@@ -31,11 +28,10 @@ class PedidoController {
         });
       }
 
-      // Pagamentos do pedido
       for (final pagamento in pedido.pagamentos) {
         await txn.insert('pedido_pagamentos', {
           'idPedido': pedidoId,
-          'valorPagamento': pagamento.valor,
+          'valor': pagamento.valor,
           'ultimaAlteracao': null,
           'deletado': 0,
         });
@@ -81,25 +77,78 @@ class PedidoController {
     }));
   }
 
+  Future<Pedido?> getPedidoById(int id) async {
+    final db = await _dbHelper.database;
+
+    final pedidoResult = await db.query(
+      'pedidos',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (pedidoResult.isEmpty) return null;
+
+    final itensResult = await db.query(
+      'pedido_itens',
+      where: 'idPedido = ?',
+      whereArgs: [id],
+    );
+
+    final pagamentosResult = await db.query(
+      'pedido_pagamentos',
+      where: 'idPedido = ?',
+      whereArgs: [id],
+    );
+
+    final pedidoData = pedidoResult.first;
+    
+    final itens = itensResult.map((item) => PedidoItem(
+      id: item['id'] as int,
+      idPedido: item['idPedido'] as int,
+      idProduto: item['idProduto'] as int,
+      quantidade: (item['quantidade'] as num).toDouble(),
+      totalItem: (item['totalItem'] as num).toDouble(),
+    )).toList();
+
+    final pagamentos = pagamentosResult.map((pagamento) => PedidoPagamento(
+      id: pagamento['id'] as int,
+      idPedido: pagamento['idPedido'] as int,
+      valor: (pagamento['valor'] as num).toDouble(),
+    )).toList();
+
+    // 5. Construir e retornar o objeto Pedido completo
+    return Pedido(
+      id: pedidoData['id'] as int,
+      idCliente: pedidoData['idCliente'] as int,
+      idUsuario: pedidoData['idUsuario'] as int,
+      totalPedido: (pedidoData['totalPedido'] as num).toDouble(),
+      dataCriacao: DateTime.parse(pedidoData['dataCriacao'] as String),
+      ultimaAlteracao: pedidoData['ultimaAlteracao'] != null 
+          ? DateTime.parse(pedidoData['ultimaAlteracao'] as String) 
+          : null,
+      deletado: pedidoData['deletado'] as int? ?? 0,
+      itens: itens,
+      pagamentos: pagamentos,
+    );
+  }
+
   Future<bool> atualizarPedidoCompleto(Pedido pedido) async {
     final db = await _dbHelper.database;
     
     try {
       await db.transaction((txn) async {
-        // Atualiza pedido principal
         await txn.update(
           'pedidos',
           {
             'idCliente': pedido.idCliente,
             'totalPedido': pedido.totalPedido,
-            'ultimaAlteracao': pedido.ultimaAlteracao?.toIso8601String() ?? 
-                DateTime.now().toIso8601String(),
+            'ultimaAlteracao': pedido.ultimaAlteracao != null ? DateTime.now().toIso8601String() : null,
           },
           where: 'id = ?',
           whereArgs: [pedido.id],
         );
 
-        // Remove e recria itens
         await txn.delete(
           'pedido_itens',
           where: 'idPedido = ?',
@@ -112,13 +161,10 @@ class PedidoController {
             'idProduto': item.idProduto,
             'quantidade': item.quantidade,
             'totalItem': item.totalItem,
-            'ultimaAlteracao': pedido.ultimaAlteracao?.toIso8601String() ?? 
-                DateTime.now().toIso8601String(),
             'deletado': 0,
           });
         }
 
-        // Remove e recria pagamentos
         await txn.delete(
           'pedido_pagamentos',
           where: 'idPedido = ?',
@@ -128,9 +174,7 @@ class PedidoController {
         for (final pagamento in pedido.pagamentos) {
           await txn.insert('pedido_pagamentos', {
             'idPedido': pedido.id,
-            'valorPagamento': pagamento.valor,
-            'ultimaAlteracao': pedido.ultimaAlteracao?.toIso8601String() ?? 
-                DateTime.now().toIso8601String(),
+            'valor': pagamento.valor,
             'deletado': 0,
           });
         }
@@ -145,7 +189,6 @@ class PedidoController {
     final db = await _dbHelper.database;
     
     return await db.transaction((txn) async {
-      // Marca o pedido e seus relacionamentos como deletados
       final countPedido = await txn.update(
         'pedidos',
         {
@@ -186,7 +229,6 @@ class PedidoController {
     final db = await _dbHelper.database;
     
     return await db.transaction((txn) async {
-      // Remove completamente o pedido e seus relacionamentos
       await txn.delete(
         'pedido_pagamentos',
         where: 'idPedido = ?',
@@ -249,7 +291,6 @@ class PedidoController {
     final db = await _dbHelper.database;
     
     return await db.transaction((txn) async {
-      // Restaura o pedido e seus relacionamentos
       final countPedido = await txn.update(
         'pedidos',
         {
@@ -290,8 +331,7 @@ class PedidoController {
     if(pedido.itens.isEmpty || pedido.pagamentos.isEmpty) {
       return false;
     }
-    
-    // Valida totais
+
     final totalItens = _calcularTotalItens(pedido.itens);
     final totalPagamentos = _calcularTotalPagamentos(pedido.pagamentos);
 
@@ -308,12 +348,84 @@ class PedidoController {
     return true;
   }
 
-  // Métodos auxiliares simplificados
+  Future<void> upsertPedidoFromServer(Pedido pedido) async {
+    final db = await _dbHelper.database;
+    
+    await db.transaction((txn) async {
+      final existing = await txn.query(
+        'pedidos',
+        where: 'id = ?',
+        whereArgs: [pedido.id],
+        limit: 1,
+      );
+
+      final pedidoJson = pedido.toDbJson();
+
+      if (existing.isNotEmpty) {
+        await txn.update(
+          'pedidos',
+          pedidoJson,
+          where: 'id = ?',
+          whereArgs: [pedido.id],
+        );
+        
+        await txn.delete(
+          'pedido_itens',
+          where: 'idPedido = ?',
+          whereArgs: [pedido.id],
+        );
+        await txn.delete(
+          'pedido_pagamentos',
+          where: 'idPedido = ?',
+          whereArgs: [pedido.id],
+        );
+      } else {
+        await txn.insert('pedidos', pedidoJson);
+      }
+
+      for (final item in pedido.itens) {
+        await txn.insert('pedido_itens', item.toJson());
+      }
+
+      for (final pagamento in pedido.pagamentos) {
+        await txn.insert('pedido_pagamentos', pagamento.toJson());
+      }
+    });
+  }
+
+  Map<String, dynamic> formatarParaServidor(Pedido pedido) {
+    return {
+      'id': pedido.id,
+      'idCliente': pedido.idCliente,
+      'idUsuario': pedido.idUsuario,
+      'totalPedido': pedido.totalPedido,
+      'dataCriacao': _formatarData(pedido.dataCriacao),
+      'ultimaAlteracao': _formatarData(pedido.ultimaAlteracao),
+      'itens': pedido.itens?.map((item) => {
+        'id': item.id,
+        'idPedido': item.idPedido,
+        'idProduto': item.idProduto,
+        'quantidade': item.quantidade,
+        'totalItem': item.totalItem,
+      }).toList(),
+      'pagamentos': pedido.pagamentos?.map((pagamento) => {
+        'id': pagamento.id,
+        'idPedido': pagamento.idPedido,
+        'valor': pagamento.valor,
+      }).toList(),
+    };
+  }
+
+  // métodos auxiliares simplificados
   double _calcularTotalItens(List<PedidoItem> itens) {
     return itens.fold(0, (sum, item) => sum + item.totalItem);
   }
 
   double _calcularTotalPagamentos(List<PedidoPagamento> pagamentos) {
     return pagamentos.fold(0, (sum, pag) => sum + pag.valor);
+  }
+
+  String? _formatarData(DateTime? date) {
+    return date?.toUtc().toIso8601String();
   }
 }

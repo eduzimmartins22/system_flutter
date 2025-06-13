@@ -1,5 +1,3 @@
-// ignore_for_file: collection_methods_unrelated_type
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../controllers/usuario_controller.dart';
@@ -42,12 +40,11 @@ class SyncUsuariosService {
               if (usuarioServidor.ultimaAlteracao != null && 
                   usuarioServidor.ultimaAlteracao!.isAfter(usuario.ultimaAlteracao!)) {
                 await _usuarioController.upsertUsuarioFromServer(usuarioServidor);
-                onLog?.call('Usuario ${usuario.id} atualizado localmente (versão do servidor mais recente)');
                 continue;
               }
             }
           } catch (e) {
-            onLog?.call('Erro ao verificar usuario ${usuario.id} no servidor: $e');
+            onLog?.call('Usuário ${usuario.id} não existe mais no servidor.');
           }
         }
 
@@ -56,7 +53,6 @@ class SyncUsuariosService {
 
         http.Response response;
         final bool isNovoUsuario = usuario.ultimaAlteracao == null;
-        onLog?.call(isNovoUsuario ? 'é usuário novo' : 'não é novo usuário');
 
         if (isNovoUsuario) {
           response = await http.post(
@@ -65,11 +61,7 @@ class SyncUsuariosService {
             headers: {'Content-Type': 'application/json'},
           );
         } else {
-          response = await http.put(
-            Uri.parse('$url/usuarios/${usuario.id}'),
-            body: body,
-            headers: {'Content-Type': 'application/json'},
-          );
+          continue;
         }
 
         if (response.body.isEmpty) continue;
@@ -102,8 +94,6 @@ class SyncUsuariosService {
         
         if (response.statusCode == 200) {
           await _usuarioController.deletarUsuario(usuario.id);
-        } else {
-          onLog?.call('Falha ao deletar usuario ${usuario.id} | Status: ${response.statusCode}');
         }
       } catch (e) {
         onLog?.call('Erro crítico ao deletar usuario ${usuario.id}: $e');
@@ -131,14 +121,14 @@ class SyncUsuariosService {
       if (dados.isEmpty) return;
       
       final Set<String> apiUsuarioIds = dados.map((usuario) => usuario['id'].toString()).toSet();
-      final List<Usuario> localUsuariosWithChanges = await _usuarioController.getUsuariosComAlteracoes();
-
-      for (final localUsuario in localUsuariosWithChanges) {
-        if (!apiUsuarioIds.contains(localUsuario.id)) {
+      final List<Usuario> usuariosLocais = await _usuarioController.getUsuarios();
+      
+      for (final usuarioLocal in usuariosLocais) {
+        if (usuarioLocal.ultimaAlteracao != null && !apiUsuarioIds.contains(usuarioLocal.id)) {
           try {
-            await _usuarioController.deletarUsuario(localUsuario.id);
+            await _usuarioController.deletarUsuario(usuarioLocal.id);
           } catch (e) {
-            onLog?.call('Erro ao excluir localmente usuario ${localUsuario.id}: $e');
+            onLog?.call('Erro ao excluir localmente usuario ${usuarioLocal.id}: $e');
           }
         }
       }
@@ -151,7 +141,6 @@ class SyncUsuariosService {
           if (usuarioLocal != null && usuarioLocal.ultimaAlteracao != null) {
             if (usuarioServidor.ultimaAlteracao == null || 
                 usuarioLocal.ultimaAlteracao!.isAfter(usuarioServidor.ultimaAlteracao!)) {
-              onLog?.call('Usuario ${usuarioServidor.id} mantido local (versão local mais recente)');
               continue;
             }
           }

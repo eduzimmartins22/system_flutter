@@ -39,14 +39,14 @@ class SyncProdutosService {
             if (response.statusCode == 200) {
               final produtoServidor = Produto.fromJson(json.decode(response.body));
               
-              if (produtoServidor.ultimaAlteracao!.isAfter(produto.ultimaAlteracao!)) {
+              if (produtoServidor.ultimaAlteracao != null && 
+                  produtoServidor.ultimaAlteracao!.isAfter(produto.ultimaAlteracao!)) {
                 await _produtoController.upsertProdutoFromServer(produtoServidor);
-                onLog?.call('Produto ${produto.id} atualizado localmente (versão do servidor mais recente)');
                 continue;
               }
             }
           } catch (e) {
-            onLog?.call('Erro ao verificar produto ${produto.id} no servidor: $e');
+            onLog?.call('Produto ${produto.id} não existe mais no servidor.');
           }
         }
 
@@ -126,14 +126,15 @@ class SyncProdutosService {
       if (dados.isEmpty) return;
       
       final Set<String> apiProdutoIds = dados.map((produto) => produto['id'].toString()).toSet();
-      final List<Produto> localProdutosWithChanges = await _produtoController.getProdutosComAlteracoes();
-
-      for (final localProduto in localProdutosWithChanges) {
-        if (!apiProdutoIds.contains(localProduto.id)) {
+      
+      final List<Produto> produtosLocais = await _produtoController.getProdutos();
+      
+      for (final produtoLocal in produtosLocais) {
+        if (produtoLocal.ultimaAlteracao != null && !apiProdutoIds.contains(produtoLocal.id)) {
           try {
-            await _produtoController.deletarProduto(localProduto.id);
+            await _produtoController.deletarProduto(produtoLocal.id);
           } catch (e) {
-            onLog?.call('Erro ao excluir localmente produto ${localProduto.id}: $e');
+            onLog?.call('Erro ao excluir localmente produto ${produtoLocal.id}: $e');
           }
         }
       }
@@ -146,7 +147,6 @@ class SyncProdutosService {
           if (produtoLocal != null && produtoLocal.ultimaAlteracao != null) {
             if (produtoServidor.ultimaAlteracao == null || 
                 produtoLocal.ultimaAlteracao!.isAfter(produtoServidor.ultimaAlteracao!)) {
-              onLog?.call('Produto ${produtoServidor.id} mantido local (versão local mais recente)');
               continue;
             }
           }

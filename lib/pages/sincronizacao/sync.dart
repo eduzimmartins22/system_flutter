@@ -74,15 +74,8 @@ class _SyncPageState extends State<SyncPage> {
       final syncController = SyncController(_serverLink, onLog: _addLog);
       await syncController.sincronizarDados();
       _addLog('Sincronização concluída com sucesso!');
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sincronização concluída com sucesso')),
-      );
     } catch (e) {
       _addLog('Erro durante a sincronização: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro durante a sincronização: $e')),
-      );
     } finally {
       setState(() {
         _isSyncing = false;

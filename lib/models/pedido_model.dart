@@ -59,6 +59,18 @@ class Pedido {
     };
   }
 
+  Map<String, dynamic> toDbJson() {
+    return {
+      'id': id,
+      'idCliente': idCliente,
+      'idUsuario': idUsuario,
+      'totalPedido': totalPedido,
+      'dataCriacao': dataCriacao.toIso8601String(),
+      'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
+      'deletado': deletado,
+    };
+  }
+
   factory Pedido.fromJson(Map<String, dynamic> json) {
     return Pedido(
       id: json['id'] as int,
@@ -137,7 +149,7 @@ class PedidoPagamento {
     return {
       'id': id,
       'idPedido': idPedido,
-      'valorPagamento': valor,
+      'valor': valor,
     };
   }
 
@@ -145,7 +157,7 @@ class PedidoPagamento {
     return PedidoPagamento(
       id: json['id'] as int,
       idPedido: json['idPedido'] as int,
-      valor: (json['valorPagamento'] as num).toDouble(),
+      valor: (json['valor'] as num).toDouble(),
     );
   }
 }

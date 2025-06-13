@@ -42,12 +42,19 @@ class SyncClientesService {
               if (clienteServidor.ultimaAlteracao != null && 
                   clienteServidor.ultimaAlteracao!.isAfter(cliente.ultimaAlteracao!)) {
                 await _clienteController.upsertClienteFromServer(clienteServidor);
-                onLog?.call('Cliente ${cliente.id} atualizado localmente (versão do servidor mais recente)');
+                continue;
+              } else if (clienteServidor.ultimaAlteracao != null &&
+                  clienteServidor.ultimaAlteracao!.isBefore(cliente.ultimaAlteracao!)) {
+                await http.put(
+                  Uri.parse('$url/clientes/${cliente.id}'),
+                  body: json.encode(cliente.toJson()),
+                  headers: {'Content-Type': 'application/json'},
+                );
                 continue;
               }
             }
           } catch (e) {
-            onLog?.call('Erro ao verificar cliente ${cliente.id} no servidor: $e');
+            onLog?.call('Cliente ${cliente.id} não existe mais no servidor.');
           }
         }
 
@@ -64,11 +71,7 @@ class SyncClientesService {
             headers: {'Content-Type': 'application/json'},
           );
         } else {
-          response = await http.put(
-            Uri.parse('$url/clientes/${cliente.id}'),
-            body: body,
-            headers: {'Content-Type': 'application/json'},
-          );
+          continue;
         }
 
         if (response.body.isEmpty) continue;
@@ -131,14 +134,15 @@ class SyncClientesService {
       if (dados.isEmpty) return;
       
       final Set<String> apiClienteIds = dados.map((cliente) => cliente['id'].toString()).toSet();
-      final List<Cliente> localClientesWithChanges = await _clienteController.getClientesComAlteracoes();
-
-      for (final localCliente in localClientesWithChanges) {
-        if (!apiClienteIds.contains(localCliente.id)) {
+      
+      final List<Cliente> clientesLocais = await _clienteController.getClientes();
+      
+      for (final clienteLocal in clientesLocais) {
+        if (clienteLocal.ultimaAlteracao != null && !apiClienteIds.contains(clienteLocal.id)) {
           try {
-            await _clienteController.deletarCliente(localCliente.id);
+            await _clienteController.deletarCliente(clienteLocal.id);
           } catch (e) {
-            onLog?.call('Erro ao excluir localmente cliente ${localCliente.id}: $e');
+            onLog?.call('Erro ao excluir localmente cliente ${clienteLocal.id}: $e');
           }
         }
       }
@@ -151,7 +155,6 @@ class SyncClientesService {
           if (clienteLocal != null && clienteLocal.ultimaAlteracao != null) {
             if (clienteServidor.ultimaAlteracao == null || 
                 clienteLocal.ultimaAlteracao!.isAfter(clienteServidor.ultimaAlteracao!)) {
-              onLog?.call('Cliente ${clienteServidor.id} mantido local (versão local mais recente)');
               continue;
             }
           }

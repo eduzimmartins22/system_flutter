@@ -61,7 +61,7 @@ class Produto {
       'Status': Status == StatusProduto.ativo ? 0 : 1,
       'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
       'deletado': deletado,
-    }..removeWhere((key, value) => value == null);
+    };
   }
 
   factory Produto.fromJson(Map<String, dynamic> json) {

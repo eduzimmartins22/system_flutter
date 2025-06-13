@@ -14,6 +14,14 @@ class UsuarioController {
     return maps.map((map) => Usuario.fromJson(map)).toList();
   }
 
+  Future<List<Usuario>> getTodosUsuarios() async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'usuarios'
+    );
+    return maps.map((map) => Usuario.fromJson(map)).toList();
+  }
+
   Future<int> adicionarUsuario(Usuario usuario) async {
     final db = await _dbHelper.database;
     

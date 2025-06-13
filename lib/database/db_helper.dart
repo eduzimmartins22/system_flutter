@@ -132,7 +132,7 @@ class DatabaseHelper {
       CREATE TABLE pedido_pagamentos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         idPedido INTEGER NOT NULL,
-        valorPagamento REAL NOT NULL,
+        valor REAL NOT NULL,
         ultimaAlteracao TEXT,
         deletado INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (idPedido) REFERENCES pedidos(id)
@@ -141,123 +141,8 @@ class DatabaseHelper {
   }
 
   Future<void> _insertInitialData(Database db) async {
-    /* await db.insert('usuarios', {
-      'nome': 'breno',
-      'senha': 'brenin',
-    });
-
-    await db.insert('usuarios', {
-      'nome': 'eduardo',
-      'senha': 'eduzin',
-    });
-
-    // Produtos
-  await db.insert('produtos', {
-    'nome': 'Caneta Azul',
-    'unidade': 'Un',
-    'qtdEstoque': 100,
-    'precoVenda': 2.50,
-    'Status': 0,
-    'custo': 1.00,
-    'codigoBarra': '1234567890123',
-  });
-
-  await db.insert('produtos', {
-    'nome': 'Caderno 100 folhas',
-    'unidade': 'Un',
-    'qtdEstoque': 50,
-    'precoVenda': 12.90,
-    'Status': 0,
-    'custo': 7.50,
-    'codigoBarra': '7894561230012',
-  });
-
-  await db.insert('produtos', {
-    'nome': 'Garrafa 1L',
-    'unidade': 'Lt',
-    'qtdEstoque': 30,
-    'precoVenda': 8.00,
-    'Status': 0,
-    'custo': 5.00,
-    'codigoBarra': '0001112223334',
-  });
-
-  await db.insert('produtos', {
-    'nome': 'Caixa de lápis',
-    'unidade': 'Cx',
-    'qtdEstoque': 20,
-    'precoVenda': 15.00,
-    'Status': 0,
-    'custo': 9.00,
-    'codigoBarra': '3216549870001',
-  });
-
-  await db.insert('produtos', {
-    'nome': 'Resma de papel A4',
-    'unidade': 'Cx',
-    'qtdEstoque': 40,
-    'precoVenda': 25.00,
-    'Status': 0,
-    'custo': 18.00,
-    'codigoBarra': '1112223334445',
-  });
-
-  // Clientes Pessoa Física
-  await db.insert('clientes', {
-    'nome': 'Carlos Silva',
-    'tipo': 'F',
-    'cpfCnpj': '12345678901',
-    'email': 'carlos@email.com',
-    'telefone': '11999999999',
-    'numero': 123,
-    'cep': '01001000',
-    'endereco': 'Rua das Flores',
-    'bairro': 'Centro',
-    'cidade': 'São Paulo',
-    'uf': 'SP',
-  });
-
-  await db.insert('clientes', {
-    'nome': 'Ana Paula',
-    'tipo': 'F',
-    'cpfCnpj': '98765432100',
-    'email': 'ana@email.com',
-    'telefone': '11988888888',
-    'numero': 456,
-    'cep': '02002000',
-    'endereco': 'Av. Brasil',
-    'bairro': 'Jardins',
-    'cidade': 'São Paulo',
-    'uf': 'SP',
-  });
-
-  // Clientes Pessoa Jurídica
-  await db.insert('clientes', {
-    'nome': 'Tech Solutions Ltda',
-    'tipo': 'J',
-    'cpfCnpj': '11222333000188',
-    'email': 'contato@tech.com',
-    'telefone': '1133334444',
-    'numero': 1000,
-    'cep': '03003000',
-    'endereco': 'Rua da Tecnologia',
-    'bairro': 'Industrial',
-    'cidade': 'Campinas',
-    'uf': 'SP',
-  });
-
-  await db.insert('clientes', {
-    'nome': 'Comercial ABC ME',
-    'tipo': 'J',
-    'cpfCnpj': '99887766000155',
-    'email': 'abc@comercial.com',
-    'telefone': '1144445555',
-    'numero': 2000,
-    'cep': '04004000',
-    'endereco': 'Rua do Comércio',
-    'bairro': 'Centro',
-    'cidade': 'Santos',
-    'uf': 'SP',
-  });*/
+    /* 
+      A gente usava essa praga aqui pra toda vez que limpasse os dados do app não ficar colocando tudo manualmente.
+    */
   } 
 }

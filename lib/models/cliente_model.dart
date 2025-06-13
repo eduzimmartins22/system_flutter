@@ -84,7 +84,7 @@ class Cliente {
       'uf': uf,
       'ultimaAlteracao': ultimaAlteracao?.toIso8601String(),
       'deletado': deletado,
-    }..removeWhere((key, value) => value == null);
+    };
   }
 
   factory Cliente.fromJson(Map<String, dynamic> json) {
