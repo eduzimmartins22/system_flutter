@@ -39,8 +39,7 @@ class SyncProdutosService {
             if (response.statusCode == 200) {
               final produtoServidor = Produto.fromJson(json.decode(response.body));
               
-              if (produtoServidor.ultimaAlteracao != null && 
-                  produtoServidor.ultimaAlteracao!.isAfter(produto.ultimaAlteracao!)) {
+              if (produtoServidor.ultimaAlteracao!.isAfter(produto.ultimaAlteracao!)) {
                 await _produtoController.upsertProdutoFromServer(produtoServidor);
                 onLog?.call('Produto ${produto.id} atualizado localmente (versão do servidor mais recente)');
                 continue;
@@ -57,20 +56,16 @@ class SyncProdutosService {
         http.Response response;
         final bool isNovoProduto = produto.ultimaAlteracao == null;
 
-        if (isNovoProduto) {
+        if(isNovoProduto) {
           response = await http.post(
-            Uri.parse('$url/produtos'),
+            Uri.parse('$url/produtos/'),
             body: body,
             headers: {'Content-Type': 'application/json'},
           );
         } else {
-          response = await http.put(
-            Uri.parse('$url/produtos/${produto.id}'),
-            body: body,
-            headers: {'Content-Type': 'application/json'},
-          );
+          continue;
         }
-
+        
         if (response.body.isEmpty) continue;
 
         try {

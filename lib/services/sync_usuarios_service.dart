@@ -56,6 +56,7 @@ class SyncUsuariosService {
 
         http.Response response;
         final bool isNovoUsuario = usuario.ultimaAlteracao == null;
+        onLog?.call(isNovoUsuario ? 'é usuário novo' : 'não é novo usuário');
 
         if (isNovoUsuario) {
           response = await http.post(

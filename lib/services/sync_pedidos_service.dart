@@ -29,7 +29,6 @@ class SyncPedidosService {
 
     for (final pedido in pedidos) {
       try {
-        // Para pedidos existentes, verificar qual versão é mais recente
         if (pedido.id != 0 && pedido.ultimaAlteracao != null) {
           try {
             final response = await http.get(
@@ -42,11 +41,10 @@ class SyncPedidosService {
                 json.decode(response.body),
               );
 
-              // Se o servidor tem versão mais recente, atualiza localmente
               if (pedidoServidor.ultimaAlteracao != null &&
                   pedidoServidor.ultimaAlteracao!.isAfter(pedido.ultimaAlteracao!)) {
                 await _pedidoController.atualizarPedidoCompleto(pedidoServidor);
-                continue; // Pula para o próximo pedido
+                continue;
               }
             }
           } catch (e) {
@@ -54,7 +52,6 @@ class SyncPedidosService {
           }
         }
 
-        // Prepara o pedido para envio - remove a última alteração se for novo
         final pedidoParaEnvio = pedido.copyWith(
           ultimaAlteracao: pedido.id == 0 ? null : pedido.ultimaAlteracao
         );
@@ -62,12 +59,14 @@ class SyncPedidosService {
         final pedidoJson = pedidoParaEnvio.toJson();
         final body = json.encode(pedidoJson);
 
-        // Envia sempre via POST (conforme especificado)
+        onLog?.call('pedido ID:${pedido.id} -> $body');
         final response = await http.post(
           Uri.parse('$url/pedidos'),
           body: body,
           headers: {'Content-Type': 'application/json'},
         );
+
+        onLog?.call('response -> $body');
 
         if (response.body.isEmpty) continue;
 

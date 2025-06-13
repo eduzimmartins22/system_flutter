@@ -185,7 +185,7 @@ class PedidoController {
             {
               'idCliente': pedido.idCliente,
               'totalPedido': pedido.totalPedido,
-              'ultimaAlteracao': DateTime.now().toIso8601String(),
+              'ultimaAlteracao': pedido.ultimaAlteracao?.toIso8601String(),
             },
             where: 'id = ?',
             whereArgs: [pedido.id],

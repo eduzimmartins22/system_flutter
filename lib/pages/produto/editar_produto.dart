@@ -71,7 +71,6 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
         codigoBarra: _codigoBarrasController.text.isNotEmpty
             ? _codigoBarrasController.text
             : null,
-        ultimaAlteracao: widget.produto?.ultimaAlteracao,
       );
 
       bool sucesso;
@@ -79,10 +78,6 @@ class _EditarProdutoPageState extends State<EditarProdutoPage> {
         await _controller.adicionarProduto(novoProduto);
         sucesso = true;
       } else {
-        if (widget.produto?.ultimaAlteracao != null) {
-          final now = DateTime.now().toIso8601String();
-          await _controller.atualizarDataAlteracao(novoProduto.id, now);
-        }
         sucesso = await _controller.atualizarProduto(novoProduto);
       }
 
