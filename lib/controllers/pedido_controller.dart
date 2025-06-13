@@ -15,8 +15,8 @@ class PedidoController {
         'idUsuario': pedido.idUsuario,
         'totalPedido': pedido.totalPedido,
         'dataCriacao': DateTime.now().toIso8601String(),
-        'ultimaAlteracao': DateTime.now().toIso8601String(),
-        'deletado': 0, // Novo pedido não é deletado
+        'ultimaAlteracao': null,
+        'deletado': 0,
       });
 
       // itens do pedido
@@ -26,8 +26,8 @@ class PedidoController {
           'idProduto': item.idProduto,
           'quantidade': item.quantidade,
           'totalItem': item.totalItem,
-          'ultimaAlteracao': DateTime.now().toIso8601String(),
-          'deletado': 0, // Novo item não é deletado
+          'ultimaAlteracao': null,
+          'deletado': 0,
         });
 
         // atualiza estoque do produto
@@ -39,8 +39,8 @@ class PedidoController {
         await txn.insert('pedido_pagamentos', {
           'idPedido': pedidoId,
           'valorPagamento': pagamento.valor,
-          'ultimaAlteracao': DateTime.now().toIso8601String(),
-          'deletado': 0, // Novo pagamento não é deletado
+          'ultimaAlteracao': null,
+          'deletado': 0,
         });
       }
 
@@ -122,7 +122,7 @@ class PedidoController {
       );
 
       for (final item in itens) {
-        await _adicionarAoEstoque(txn, item['idProduto'] as int, item['quantidade'] as int);
+        await _adicionarAoEstoque(txn, item['idProduto'] as int, item['quantidade'] as double);
       }
 
       return true;
@@ -162,14 +162,12 @@ class PedidoController {
     final db = await _dbHelper.database;
     
     try {
-      // Primeiro obtém os itens originais para comparar
       final itensOriginais = (await db.query(
         'pedido_itens',
         where: 'idPedido = ?',
         whereArgs: [pedido.id],
       )).map((e) => PedidoItem.fromJson(e)).toList();
 
-      // Identifica itens que foram removidos
       final itensRemovidos = itensOriginais.where(
         (original) => !pedido.itens.any((novo) => novo.idProduto == original.idProduto)
       ).toList();
@@ -180,18 +178,33 @@ class PedidoController {
           await _adicionarAoEstoque(txn, item.idProduto, item.quantidade);
         }
 
-        // Resto da lógica de atualização...
-        await txn.update(
-          'pedidos',
-          {
-            'idCliente': pedido.idCliente,
-            'totalPedido': pedido.totalPedido,
-            'ultimaAlteracao': DateTime.now().toIso8601String(),
-          },
-          where: 'id = ?',
-          whereArgs: [pedido.id],
-        );
+        // Atualiza pedido principal - SOMENTE se não veio do servidor
+        if (pedido.ultimaAlteracao == null) {
+          await txn.update(
+            'pedidos',
+            {
+              'idCliente': pedido.idCliente,
+              'totalPedido': pedido.totalPedido,
+              'ultimaAlteracao': pedido.ultimaAlteracao?.toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [pedido.id],
+          );
+        } else {
+          // Se veio do servidor, mantém a data original
+          await txn.update(
+            'pedidos',
+            {
+              'idCliente': pedido.idCliente,
+              'totalPedido': pedido.totalPedido,
+              'ultimaAlteracao': pedido.ultimaAlteracao!.toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [pedido.id],
+          );
+        }
 
+        // Remove e recria itens com data apropriada
         await txn.delete(
           'pedido_itens',
           where: 'idPedido = ?',
@@ -204,12 +217,15 @@ class PedidoController {
             'idProduto': item.idProduto,
             'quantidade': item.quantidade,
             'totalItem': item.totalItem,
-            'ultimaAlteracao': DateTime.now().toIso8601String(),
+            'ultimaAlteracao': pedido.ultimaAlteracao?.toIso8601String() ?? 
+                DateTime.now().toIso8601String(),
+            'deletado': 0,
           });
 
           await _atualizarEstoqueEmEdicao(txn, item);
         }
 
+        // Remove e recria pagamentos com data apropriada
         await txn.delete(
           'pedido_pagamentos',
           where: 'idPedido = ?',
@@ -220,7 +236,9 @@ class PedidoController {
           await txn.insert('pedido_pagamentos', {
             'idPedido': pedido.id,
             'valorPagamento': pagamento.valor,
-            'ultimaAlteracao': DateTime.now().toIso8601String(),
+            'ultimaAlteracao': pedido.ultimaAlteracao?.toIso8601String() ?? 
+                DateTime.now().toIso8601String(),
+            'deletado': 0,
           });
         }
       });
@@ -263,7 +281,7 @@ class PedidoController {
     return pagamentos.fold(0, (sum, pag) => sum + pag.valor);
   }
 
-  Future<void> _atualizarEstoque(Transaction txn, int produtoId, int quantidadeVendida) async {
+  Future<void> _atualizarEstoque(Transaction txn, int produtoId, double quantidadeVendida) async {
     // Busca produto atual
     final produto = await txn.query(
       'produtos',
@@ -337,7 +355,7 @@ class PedidoController {
     });
   }
 
-  Future<void> _adicionarAoEstoque(Transaction txn, int produtoId, int quantidade) async {
+  Future<void> _adicionarAoEstoque(Transaction txn, int produtoId, double quantidade) async {
     final produto = await txn.query(
       'produtos',
       where: 'id = ?',
@@ -433,7 +451,7 @@ class PedidoController {
       );
 
       for (final item in itens) {
-        await _atualizarEstoque(txn, item['idProduto'] as int, item['quantidade'] as int);
+        await _atualizarEstoque(txn, item['idProduto'] as int, item['quantidade'] as double);
       }
 
       return true;

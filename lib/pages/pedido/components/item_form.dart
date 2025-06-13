@@ -62,7 +62,7 @@ class _ItemFormState extends State<ItemForm> {
         id: 0,
         idPedido: 0,
         idProduto: _produtoSelecionado!.id,
-        quantidade: int.parse(_quantidadeController.text),
+        quantidade: double.parse(_quantidadeController.text),
         totalItem: _totalItem,
       );
       widget.onSubmit(item);

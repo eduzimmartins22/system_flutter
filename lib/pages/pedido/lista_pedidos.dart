@@ -28,6 +28,36 @@ class _ListaPedidosPageState extends State<ListaPedidosPage> {
     });
   }
 
+  Future<void> _confirmarExclusao(Pedido pedido) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Exclusão'),
+        content: Text('Deseja realmente excluir o pedido #${pedido.id}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado == true) {
+      final sucesso = await _controller.removerPedido(pedido.id);
+      if (sucesso) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pedido marcado para exclusão')),
+        );
+        _atualizarLista();
+      }
+    }
+  }
+
   Widget _buildPedidoCard(BuildContext context, Pedido pedido) {
     // Formata a data para dd/mm/yyyy - hh:mm
     final dataFormatada = '${pedido.dataCriacao.day.toString().padLeft(2, '0')}/'
@@ -95,10 +125,11 @@ class _ListaPedidosPageState extends State<ListaPedidosPage> {
                         ),
                   ),
                   const SizedBox(height: 8),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.grey,
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    color: Colors.red,
+                    iconSize: 24,
+                    onPressed: () => _confirmarExclusao(pedido),
                   ),
                 ],
               ),

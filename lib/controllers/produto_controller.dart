@@ -40,14 +40,15 @@ class ProdutoController {
 
   Future<int> adicionarProduto(Produto produto) async {
     final db = await _dbHelper.database;
-    final map = produto.toJson()
-      ..remove('id')
-      ..['deletado'] = 0;
+    final map = produto.toJson();
+      map.remove('id');
+      map['deletado'] = 0;
     return await db.insert('produtos', map);
   }
 
   Future<bool> atualizarProduto(Produto produto) async {
     final db = await _dbHelper.database;
+
     final count = await db.update(
       'produtos',
       produto.toJson(),
@@ -107,4 +108,40 @@ class ProdutoController {
     );
     return count > 0;
   }
+
+  Future<List<Produto>> getProdutosComAlteracoes() async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'produtos',
+      where: 'ultimaAlteracao IS NOT NULL',
+    );
+    return List.generate(maps.length, (i) => Produto.fromJson(maps[i]));
+  }
+
+  Future<void> atualizarDataAlteracao(int id, String ultimaAlteracao) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'produtos',
+      {'ultimaAlteracao': ultimaAlteracao},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> upsertProdutoFromServer(Produto produto) async {
+    final db = await _dbHelper.database;
+    final existing = await getProdutoPorId(produto.id);
+    
+    if (existing != null) {
+      await db.update(
+        'produtos',
+        produto.toJson(),
+        where: 'id = ?',
+        whereArgs: [produto.id],
+      );
+    } else {
+      await db.insert('produtos', produto.toJson());
+    }
+  }
+  
 }

@@ -167,15 +167,15 @@ class _CadastroProdutoPageState extends State<CadastroProdutoPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: produto.status == StatusProduto.ativo
+                  color: produto.Status == StatusProduto.ativo
                       ? Colors.green.withOpacity(0.2)
                       : Colors.grey.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  produto.status.descricao,
+                  produto.Status.descricao,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: produto.status == StatusProduto.ativo
+                        color: produto.Status == StatusProduto.ativo
                             ? Colors.green
                             : Colors.grey,
                       ),

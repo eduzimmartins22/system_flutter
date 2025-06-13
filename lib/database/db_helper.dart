@@ -118,7 +118,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         idPedido INTEGER NOT NULL,
         idProduto INTEGER NOT NULL,
-        quantidade INTEGER NOT NULL,
+        quantidade REAL NOT NULL,
         totalItem REAL NOT NULL,
         ultimaAlteracao TEXT,
         deletado INTEGER NOT NULL DEFAULT 0,
