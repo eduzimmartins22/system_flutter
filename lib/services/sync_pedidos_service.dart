@@ -29,8 +29,8 @@ class SyncPedidosService {
 
     for (final pedido in pedidos) {
       try {
-        // Se o pedido tem última alteração, verificar qual versão é mais recente
-        if (pedido.ultimaAlteracao != null) {
+        // Para pedidos existentes, verificar qual versão é mais recente
+        if (pedido.id != 0 && pedido.ultimaAlteracao != null) {
           try {
             final response = await http.get(
               Uri.parse('$url/pedidos/${pedido.id}'),
@@ -42,46 +42,32 @@ class SyncPedidosService {
                 json.decode(response.body),
               );
 
-              // Comparar datas de alteração
+              // Se o servidor tem versão mais recente, atualiza localmente
               if (pedidoServidor.ultimaAlteracao != null &&
-                  pedidoServidor.ultimaAlteracao!.isAfter(
-                    pedido.ultimaAlteracao!,
-                  )) {
-                // Servidor tem versão mais recente - atualizar localmente
+                  pedidoServidor.ultimaAlteracao!.isAfter(pedido.ultimaAlteracao!)) {
                 await _pedidoController.atualizarPedidoCompleto(pedidoServidor);
-                onLog?.call(
-                  'Pedido ${pedido.id} atualizado localmente (versão do servidor mais recente)',
-                );
-                continue; // Pular para o próximo pedido
+                continue; // Pula para o próximo pedido
               }
             }
           } catch (e) {
-            onLog?.call(
-              'Erro ao verificar pedido ${pedido.id} no servidor: $e',
-            );
+            onLog?.call('Erro ao verificar pedido ${pedido.id} no servidor: $e');
           }
         }
 
-        // Se chegou aqui, ou o pedido não tem última alteração, ou a versão local é mais recente
-        final pedidoJson = pedido.toJson();
+        // Prepara o pedido para envio - remove a última alteração se for novo
+        final pedidoParaEnvio = pedido.copyWith(
+          ultimaAlteracao: pedido.id == 0 ? null : pedido.ultimaAlteracao
+        );
+        
+        final pedidoJson = pedidoParaEnvio.toJson();
         final body = json.encode(pedidoJson);
 
-        http.Response response;
-        final bool isNovoPedido = pedido.ultimaAlteracao == null;
-
-        if (isNovoPedido) {
-          response = await http.post(
-            Uri.parse('$url/pedidos'),
-            body: body,
-            headers: {'Content-Type': 'application/json'},
-          );
-        } else {
-          response = await http.put(
-            Uri.parse('$url/pedidos/${pedido.id}'),
-            body: body,
-            headers: {'Content-Type': 'application/json'},
-          );
-        }
+        // Envia sempre via POST (conforme especificado)
+        final response = await http.post(
+          Uri.parse('$url/pedidos'),
+          body: body,
+          headers: {'Content-Type': 'application/json'},
+        );
 
         if (response.body.isEmpty) continue;
 
@@ -91,9 +77,7 @@ class SyncPedidosService {
             final pedidoAtualizado = Pedido.fromJson(decoded);
             await _pedidoController.atualizarPedidoCompleto(pedidoAtualizado);
           } else {
-            onLog?.call(
-              'Falha no ${isNovoPedido ? 'envio' : 'update'} do pedido ${pedido.id} | Status: ${response.statusCode}',
-            );
+            onLog?.call('Falha no envio do pedido ${pedido.id} | Status: ${response.statusCode}');
           }
         } catch (e) {
           onLog?.call('Erro processando resposta do pedido ${pedido.id}: $e');
@@ -140,16 +124,13 @@ class SyncPedidosService {
       }
 
       final responseBody = json.decode(response.body);
-      
-      // Verifica se a resposta é uma lista ou um único objeto
       List<dynamic> dados;
-      if (responseBody is List) {
-        dados = responseBody;
-      } else if (responseBody is Map && responseBody.containsKey('dados')) {
-        dados = responseBody['dados'];
+      
+      if (responseBody is Map && responseBody.containsKey('dados')) {
+        dados = responseBody['dados'] as List<dynamic>;
       } else {
-        // Se for um único pedido, cria uma lista com ele
-        dados = [responseBody];
+        onLog?.call('Formato de resposta inesperado: $responseBody');
+        return;
       }
 
       if (dados.isEmpty) return;
@@ -168,8 +149,7 @@ class SyncPedidosService {
           
           if (pedidoLocal != null && pedidoLocal.ultimaAlteracao != null) {
             if (pedidoServidor.ultimaAlteracao == null || 
-                pedidoLocal.ultimaAlteracao!.isAfter(pedidoServidor.ultimaAlteracao!)) {
-              onLog?.call('Pedido ${pedidoServidor.id} mantido local (versão local mais recente)');
+              pedidoLocal.ultimaAlteracao!.isAfter(pedidoServidor.ultimaAlteracao!)) {
               continue;
             }
           }

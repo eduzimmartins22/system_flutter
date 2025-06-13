@@ -29,7 +29,6 @@ class SyncUsuariosService {
 
     for (final usuario in usuarios) {
       try {
-        // Se o usuario tem última alteração, verificar qual versão é mais recente
         if (usuario.ultimaAlteracao != null) {
           try {
             final response = await http.get(
@@ -40,13 +39,11 @@ class SyncUsuariosService {
             if (response.statusCode == 200) {
               final usuarioServidor = Usuario.fromJson(json.decode(response.body));
               
-              // Comparar datas de alteração
               if (usuarioServidor.ultimaAlteracao != null && 
                   usuarioServidor.ultimaAlteracao!.isAfter(usuario.ultimaAlteracao!)) {
-                // Servidor tem versão mais recente - atualizar localmente
                 await _usuarioController.upsertUsuarioFromServer(usuarioServidor);
                 onLog?.call('Usuario ${usuario.id} atualizado localmente (versão do servidor mais recente)');
-                continue; // Pular para o próximo usuario
+                continue;
               }
             }
           } catch (e) {
@@ -54,7 +51,6 @@ class SyncUsuariosService {
           }
         }
 
-        // Se chegou aqui, ou o usuario não tem última alteração, ou a versão local é mais recente
         final usuarioJson = usuario.toJson();
         final body = json.encode(usuarioJson);
 
@@ -127,7 +123,6 @@ class SyncUsuariosService {
       final Map<String, dynamic> responseBody = json.decode(response.body);
       
       if (!responseBody.containsKey('dados')) {
-        onLog?.call('Resposta inválida da API: ausência de "dados"');
         return;
       }
 
@@ -152,17 +147,14 @@ class SyncUsuariosService {
           final usuarioServidor = Usuario.fromJson(usuarioJson);
           final usuarioLocal = await _usuarioController.buscarPorId(usuarioServidor.id);
           
-          // Se o usuario existe localmente e tem data de alteração, verificar qual é mais recente
           if (usuarioLocal != null && usuarioLocal.ultimaAlteracao != null) {
             if (usuarioServidor.ultimaAlteracao == null || 
                 usuarioLocal.ultimaAlteracao!.isAfter(usuarioServidor.ultimaAlteracao!)) {
-              // Versão local é mais recente - manter local
               onLog?.call('Usuario ${usuarioServidor.id} mantido local (versão local mais recente)');
               continue;
             }
           }
           
-          // Atualizar com versão do servidor
           await _usuarioController.upsertUsuarioFromServer(usuarioServidor);
         } catch (e) {
           onLog?.call('Erro processando usuario ${usuarioJson['id']}: $e');

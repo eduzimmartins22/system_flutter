@@ -29,7 +29,6 @@ class SyncProdutosService {
 
     for (final produto in produtos) {
       try {
-        // Se o produto tem última alteração, verificar qual versão é mais recente
         if (produto.ultimaAlteracao != null) {
           try {
             final response = await http.get(
@@ -40,13 +39,11 @@ class SyncProdutosService {
             if (response.statusCode == 200) {
               final produtoServidor = Produto.fromJson(json.decode(response.body));
               
-              // Comparar datas de alteração
               if (produtoServidor.ultimaAlteracao != null && 
                   produtoServidor.ultimaAlteracao!.isAfter(produto.ultimaAlteracao!)) {
-                // Servidor tem versão mais recente - atualizar localmente
                 await _produtoController.upsertProdutoFromServer(produtoServidor);
                 onLog?.call('Produto ${produto.id} atualizado localmente (versão do servidor mais recente)');
-                continue; // Pular para o próximo produto
+                continue;
               }
             }
           } catch (e) {
@@ -54,7 +51,6 @@ class SyncProdutosService {
           }
         }
 
-        // Se chegou aqui, ou o produto não tem última alteração, ou a versão local é mais recente
         final produtoJson = produto.toJson();
         final body = json.encode(produtoJson);
 
@@ -152,17 +148,14 @@ class SyncProdutosService {
           final produtoServidor = Produto.fromJson(produtoJson);
           final produtoLocal = await _produtoController.getProdutoPorId(produtoServidor.id);
           
-          // Se o produto existe localmente e tem data de alteração, verificar qual é mais recente
           if (produtoLocal != null && produtoLocal.ultimaAlteracao != null) {
             if (produtoServidor.ultimaAlteracao == null || 
                 produtoLocal.ultimaAlteracao!.isAfter(produtoServidor.ultimaAlteracao!)) {
-              // Versão local é mais recente - manter local
               onLog?.call('Produto ${produtoServidor.id} mantido local (versão local mais recente)');
               continue;
             }
           }
           
-          // Atualizar com versão do servidor
           await _produtoController.upsertProdutoFromServer(produtoServidor);
         } catch (e) {
           onLog?.call('Erro processando produto ${produtoJson['id']}: $e');

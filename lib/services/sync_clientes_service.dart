@@ -29,7 +29,6 @@ class SyncClientesService {
 
     for (final cliente in clientes) {
       try {
-        // Se o cliente tem última alteração, verificar qual versão é mais recente
         if (cliente.ultimaAlteracao != null) {
           try {
             final response = await http.get(
@@ -40,13 +39,11 @@ class SyncClientesService {
             if (response.statusCode == 200) {
               final clienteServidor = Cliente.fromJson(json.decode(response.body));
               
-              // Comparar datas de alteração
               if (clienteServidor.ultimaAlteracao != null && 
                   clienteServidor.ultimaAlteracao!.isAfter(cliente.ultimaAlteracao!)) {
-                // Servidor tem versão mais recente - atualizar localmente
                 await _clienteController.upsertClienteFromServer(clienteServidor);
                 onLog?.call('Cliente ${cliente.id} atualizado localmente (versão do servidor mais recente)');
-                continue; // Pular para o próximo cliente
+                continue;
               }
             }
           } catch (e) {
@@ -54,7 +51,6 @@ class SyncClientesService {
           }
         }
 
-        // Se chegou aqui, ou o cliente não tem última alteração, ou a versão local é mais recente
         final clienteJson = cliente.toJson();
         final body = json.encode(clienteJson);
 
@@ -152,17 +148,14 @@ class SyncClientesService {
           final clienteServidor = Cliente.fromJson(clienteJson);
           final clienteLocal = await _clienteController.buscarPorId(clienteServidor.id);
           
-          // Se o cliente existe localmente e tem data de alteração, verificar qual é mais recente
           if (clienteLocal != null && clienteLocal.ultimaAlteracao != null) {
             if (clienteServidor.ultimaAlteracao == null || 
                 clienteLocal.ultimaAlteracao!.isAfter(clienteServidor.ultimaAlteracao!)) {
-              // Versão local é mais recente - manter local
               onLog?.call('Cliente ${clienteServidor.id} mantido local (versão local mais recente)');
               continue;
             }
           }
           
-          // Atualizar com versão do servidor
           await _clienteController.upsertClienteFromServer(clienteServidor);
         } catch (e) {
           onLog?.call('Erro processando cliente ${clienteJson['id']}: $e');
