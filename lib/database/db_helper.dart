@@ -8,6 +8,8 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   static Database? _database;
+
+  static const int _newVersion = 2;
   
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -21,7 +23,7 @@ class DatabaseHelper {
       path = join(path, 'db_app-vendas.db');
       _database = await openDatabase(
         path,
-        version: 1,
+        version: _newVersion,
         onCreate: _onCreateDB,
         onUpgrade: _onUpgradeDB,
       ); 
@@ -34,6 +36,17 @@ class DatabaseHelper {
     await _insertInitialData(db);
   }
 
+  FutureOr<void> _onUpgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE usuarios ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE produtos ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE clientes ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE pedidos ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE pedido_itens ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE pedido_pagamentos ADD COLUMN deletado INTEGER NOT NULL DEFAULT 0');
+    }
+  }
+
   Future<void> _createTables(Database db) async {
     //usuario
     await db.execute('''
@@ -42,6 +55,7 @@ class DatabaseHelper {
         nome TEXT NOT NULL,
         senha TEXT NOT NULL,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         CONSTRAINT usuario_nome_unico UNIQUE (nome)
       )
     ''');
@@ -51,17 +65,17 @@ class DatabaseHelper {
       CREATE TABLE produtos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
-        unidade TEXT NOT NULL CHECK (unidade IN ('un', 'cx', 'kg', 'lt', 'ml')),
-        quantidadeEstoque INTEGER NOT NULL DEFAULT 0,
-        precoVenda REAL NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('ativo', 'inativo')),
-        precoCusto REAL,
-        codigoBarras TEXT,
+        unidade TEXT NOT NULL CHECK (unidade IN ('Un', 'Cx', 'Kg', 'Lt', 'Ml')),
+        qtdEstoque REAL NOT NULL DEFAULT 0,
+        precoVenda REAL NOT NULL CHECK (precoVenda >= 0),
+        custo REAL,
+        codigoBarra TEXT,
+        Status INTEGER NOT NULL CHECK (Status IN (0, 1)),
         ultimaAlteracao TEXT,
-        CONSTRAINT preco_venda_positivo CHECK (precoVenda >= 0),
-        CONSTRAINT estoque_positivo CHECK (quantidadeEstoque >= 0),
+        deletado INTEGER NOT NULL DEFAULT 0,
+        CONSTRAINT estoque_positivo CHECK (qtdEstoque >= 0),
         CONSTRAINT produto_nome_unico UNIQUE (nome)
-      )
+      );
     ''');
 
     //cliente
@@ -69,21 +83,22 @@ class DatabaseHelper {
       CREATE TABLE clientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
-        tipo TEXT NOT NULL CHECK (tipo IN ('fisica', 'juridica')),
+        tipo TEXT NOT NULL CHECK (tipo IN ('F', 'J')),
         cpfCnpj TEXT NOT NULL,
         email TEXT,
         telefone TEXT,
         numero INTEGER,
-        cep TEXT,  -- Alterado para TEXT pois no modelo pode ser null e em alguns casos pode conter hífen
+        cep TEXT,
         endereco TEXT,
         bairro TEXT,
         cidade TEXT,
         uf TEXT,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         CONSTRAINT cpf_cnpj_unico UNIQUE (cpfCnpj),
         CONSTRAINT cpf_length CHECK (
-          (tipo = 'fisica' AND LENGTH(cpfCnpj) = 11) OR
-          (tipo = 'juridica' AND LENGTH(cpfCnpj) = 14)
+          (tipo = 'F' AND LENGTH(cpfCnpj) = 11) OR
+          (tipo = 'J' AND LENGTH(cpfCnpj) = 14)
         )
       )
     ''');
@@ -97,6 +112,7 @@ class DatabaseHelper {
         totalPedido REAL NOT NULL,
         dataCriacao TEXT NOT NULL,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (idCliente) REFERENCES clientes(id),
         FOREIGN KEY (idUsuario) REFERENCES usuarios(id)
       )
@@ -111,6 +127,7 @@ class DatabaseHelper {
         quantidade INTEGER NOT NULL,
         totalItem REAL NOT NULL,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (idPedido) REFERENCES pedidos(id),
         FOREIGN KEY (idProduto) REFERENCES produtos(id)
       )
@@ -123,26 +140,14 @@ class DatabaseHelper {
         idPedido INTEGER NOT NULL,
         valorPagamento REAL NOT NULL,
         ultimaAlteracao TEXT,
+        deletado INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (idPedido) REFERENCES pedidos(id)
       )
     ''');
   }
 
-
-  FutureOr<void> _onUpgradeDB(Database db, int oldVersion, int newVersion) async{
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE produtos ADD COLUMN novo_campo TEXT');
-    }
-  }
-
   Future<void> _insertInitialData(Database db) async {
-    //admin padrão
-    await db.insert('usuarios', {
-      'nome': 'admin',
-      'senha': 'admin',
-    });
-
-    await db.insert('usuarios', {
+    /* await db.insert('usuarios', {
       'nome': 'breno',
       'senha': 'brenin',
     });
@@ -155,58 +160,58 @@ class DatabaseHelper {
     // Produtos
   await db.insert('produtos', {
     'nome': 'Caneta Azul',
-    'unidade': 'un',
-    'quantidadeEstoque': 100,
+    'unidade': 'Un',
+    'qtdEstoque': 100,
     'precoVenda': 2.50,
-    'status': 'ativo',
-    'precoCusto': 1.00,
-    'codigoBarras': '1234567890123',
+    'Status': 0,
+    'custo': 1.00,
+    'codigoBarra': '1234567890123',
   });
 
   await db.insert('produtos', {
     'nome': 'Caderno 100 folhas',
-    'unidade': 'un',
-    'quantidadeEstoque': 50,
+    'unidade': 'Un',
+    'qtdEstoque': 50,
     'precoVenda': 12.90,
-    'status': 'ativo',
-    'precoCusto': 7.50,
-    'codigoBarras': '7894561230012',
+    'Status': 0,
+    'custo': 7.50,
+    'codigoBarra': '7894561230012',
   });
 
   await db.insert('produtos', {
     'nome': 'Garrafa 1L',
-    'unidade': 'lt',
-    'quantidadeEstoque': 30,
+    'unidade': 'Lt',
+    'qtdEstoque': 30,
     'precoVenda': 8.00,
-    'status': 'ativo',
-    'precoCusto': 5.00,
-    'codigoBarras': '0001112223334',
+    'Status': 0,
+    'custo': 5.00,
+    'codigoBarra': '0001112223334',
   });
 
   await db.insert('produtos', {
     'nome': 'Caixa de lápis',
-    'unidade': 'cx',
-    'quantidadeEstoque': 20,
+    'unidade': 'Cx',
+    'qtdEstoque': 20,
     'precoVenda': 15.00,
-    'status': 'ativo',
-    'precoCusto': 9.00,
-    'codigoBarras': '3216549870001',
+    'Status': 0,
+    'custo': 9.00,
+    'codigoBarra': '3216549870001',
   });
 
   await db.insert('produtos', {
     'nome': 'Resma de papel A4',
-    'unidade': 'cx',
-    'quantidadeEstoque': 40,
+    'unidade': 'Cx',
+    'qtdEstoque': 40,
     'precoVenda': 25.00,
-    'status': 'ativo',
-    'precoCusto': 18.00,
-    'codigoBarras': '1112223334445',
+    'Status': 0,
+    'custo': 18.00,
+    'codigoBarra': '1112223334445',
   });
 
   // Clientes Pessoa Física
   await db.insert('clientes', {
     'nome': 'Carlos Silva',
-    'tipo': 'fisica',
+    'tipo': 'F',
     'cpfCnpj': '12345678901',
     'email': 'carlos@email.com',
     'telefone': '11999999999',
@@ -220,7 +225,7 @@ class DatabaseHelper {
 
   await db.insert('clientes', {
     'nome': 'Ana Paula',
-    'tipo': 'fisica',
+    'tipo': 'F',
     'cpfCnpj': '98765432100',
     'email': 'ana@email.com',
     'telefone': '11988888888',
@@ -235,7 +240,7 @@ class DatabaseHelper {
   // Clientes Pessoa Jurídica
   await db.insert('clientes', {
     'nome': 'Tech Solutions Ltda',
-    'tipo': 'juridica',
+    'tipo': 'J',
     'cpfCnpj': '11222333000188',
     'email': 'contato@tech.com',
     'telefone': '1133334444',
@@ -249,7 +254,7 @@ class DatabaseHelper {
 
   await db.insert('clientes', {
     'nome': 'Comercial ABC ME',
-    'tipo': 'juridica',
+    'tipo': 'J',
     'cpfCnpj': '99887766000155',
     'email': 'abc@comercial.com',
     'telefone': '1144445555',
@@ -259,6 +264,6 @@ class DatabaseHelper {
     'bairro': 'Centro',
     'cidade': 'Santos',
     'uf': 'SP',
-  });
-  }
+  });*/
+  } 
 }

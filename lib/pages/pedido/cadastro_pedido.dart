@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 import '../../controllers/pedido_controller.dart';
 import '../../models/pedido_model.dart';
 import 'components/cliente_selecao.dart';
+import 'components/usuario_selecao.dart';
 import 'components/item_lista.dart';
 import 'components/pagamento_lista.dart';
 import 'components/resumo_pedido.dart';
 
 class CadastroPedidoPage extends StatefulWidget {
-  const CadastroPedidoPage({super.key});
+  final Pedido? pedido;
+  final int? usuarioLogadoId;
+
+  const CadastroPedidoPage({
+    super.key,
+    this.pedido,
+    this.usuarioLogadoId,
+  });
 
   @override
   State<CadastroPedidoPage> createState() => _CadastroPedidoPageState();
@@ -22,14 +30,17 @@ class _CadastroPedidoPageState extends State<CadastroPedidoPage> {
   @override
   void initState() {
     super.initState();
-    _resetPedido();
+    _pedido = widget.pedido ?? _resetPedido();
+    if (widget.pedido == null && widget.usuarioLogadoId != null) {
+      _pedido = _pedido.copyWith(idUsuario: widget.usuarioLogadoId!);
+    }
   }
 
-  void _resetPedido() {
-    _pedido = Pedido(
+  Pedido _resetPedido() {
+    return Pedido(
       id: 0,
       idCliente: 0,
-      idUsuario: 1, // TODO: Pegar do usuário logado
+      idUsuario: 0,
       totalPedido: 0,
       dataCriacao: DateTime.now(),
       itens: [],
@@ -47,14 +58,29 @@ class _CadastroPedidoPageState extends State<CadastroPedidoPage> {
     });
   }
 
-  void _removerItem(int index) {
-    setState(() {
-      final novosItens = List<PedidoItem>.from(_pedido.itens)..removeAt(index);
-      _pedido = _pedido.copyWith(
-        itens: novosItens,
-        totalPedido: _calcularTotal(novosItens),
+  void _removerItem(int index) async {
+    final itemRemovido = _pedido.itens[index];
+    
+    try {
+      setState(() {
+        final novosItens = List<PedidoItem>.from(_pedido.itens)..removeAt(index);
+        _pedido = _pedido.copyWith(
+          itens: novosItens,
+          totalPedido: _calcularTotal(novosItens),
+        );
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao remover item: $e')),
       );
-    });
+      setState(() {
+        final novosItens = List<PedidoItem>.from(_pedido.itens)..add(itemRemovido);
+        _pedido = _pedido.copyWith(
+          itens: novosItens,
+          totalPedido: _calcularTotal(novosItens),
+        );
+      });
+    }
   }
 
   void _adicionarPagamento(PedidoPagamento pagamento) {
@@ -83,8 +109,21 @@ class _CadastroPedidoPageState extends State<CadastroPedidoPage> {
     });
   }
 
+  void _atualizarUsuario(int usuarioId) {
+    setState(() {
+      _pedido = _pedido.copyWith(idUsuario: usuarioId);
+    });
+  }
+
   Future<void> _salvarPedido() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_pedido.idUsuario <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione um usuário antes de salvar!')),
+      );
+      return;
+    }
     
     final isValid = await _controller.validarPedido(_pedido);
     if (!isValid) {
@@ -95,7 +134,11 @@ class _CadastroPedidoPageState extends State<CadastroPedidoPage> {
     }
 
     try {
-      await _controller.criarPedidoCompleto(_pedido);
+      if (_pedido.id > 0) {
+        await _controller.atualizarPedidoCompleto(_pedido);
+      } else {
+        await _controller.criarPedidoCompleto(_pedido);
+      }
       Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -108,13 +151,7 @@ class _CadastroPedidoPageState extends State<CadastroPedidoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Novo Pedido'),
-        /* actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _salvarPedido,
-          ),
-        ], */
+        title: Text(_pedido.id > 0 ? 'Editar Pedido' : 'Novo Pedido'),
       ),
       body: Form(
         key: _formKey,
@@ -124,6 +161,12 @@ class _CadastroPedidoPageState extends State<CadastroPedidoPage> {
             children: [
               ClienteSelecao(
                 onClienteSelecionado: _atualizarCliente,
+                clienteIdInicial: _pedido.idCliente > 0 ? _pedido.idCliente : null,
+              ),
+              const SizedBox(height: 4),
+              UsuarioSelecao(
+                onUsuarioSelecionado: _atualizarUsuario,
+                usuarioIdInicial: _pedido.idUsuario > 0 ? _pedido.idUsuario : null,
               ),
               const SizedBox(height: 4),
               ItemLista(

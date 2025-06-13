@@ -5,7 +5,7 @@ import 'database/db_helper.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final dbHelper = DatabaseHelper();
-  await dbHelper.database; // Inicializa o banco de dados
+  await dbHelper.database;
   runApp(const SalesApp());
 }
 
@@ -59,7 +59,7 @@ class SalesApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.light,
-      home: const LoginPage(), // Direciona direto para a tela de login
+      home: const LoginPage(),
     );
   }
 }
