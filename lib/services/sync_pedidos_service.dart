@@ -59,13 +59,7 @@ class SyncPedidosService {
                 body: body,
                 headers: {'Content-Type': 'application/json'},
               );
-            } 
-            else {
-              if (pedido.ultimaAlteracao != null) {
-                await _pedidoController.deletarPedido(pedido.id);
-                onLog?.call('Pedido ${pedido.id} não existe mais no servidor, removido localmente.');
-              }
-            } 
+            }
           }
           continue;
         }
@@ -88,7 +82,7 @@ class SyncPedidosService {
           Resposta: ${response.body}''');
         }
       } catch (e) {
-        onLog?.call('Erro crítico no pedido ${pedido.id}: $e');
+        await _pedidoController.deletarPedido(pedido.id);
       }
     }
   }
@@ -146,7 +140,6 @@ class SyncPedidosService {
       for (final pedidoLocal in pedidosLocaisSincronizados) {
         if (!serverPedidoIds.contains(pedidoLocal.id)) {
           try {
-            onLog?.call('Pedido ${pedidoLocal.id} não encontrado no servidor - removendo localmente');
             await _pedidoController.deletarPedido(pedidoLocal.id);
           } catch (e) {
             onLog?.call('Erro ao excluir localmente pedido ${pedidoLocal.id}: $e');
@@ -161,7 +154,6 @@ class SyncPedidosService {
           
           if (pedidoJson['deletado'] == true || pedidoJson['deletado'] == 1) {
             if (pedidoLocal != null) {
-              onLog?.call('Pedido ${pedidoServidor.id} marcado como deletado no servidor - removendo localmente');
               await _pedidoController.deletarPedido(pedidoLocal.id);
             }
             continue;
@@ -171,11 +163,9 @@ class SyncPedidosService {
               pedidoLocal.ultimaAlteracao != null &&
               pedidoServidor.ultimaAlteracao != null &&
               pedidoLocal.ultimaAlteracao!.isAfter(pedidoServidor.ultimaAlteracao!)) {
-            onLog?.call('Pedido ${pedidoLocal.id} tem alterações locais mais recentes - mantendo versão local');
             continue;
           }
           
-          onLog?.call('Atualizando pedido ${pedidoServidor.id} com dados do servidor');
           await _pedidoController.upsertPedidoFromServer(pedidoServidor);
         } catch (e) {
           onLog?.call('Erro processando pedido ${pedidoJson['id']}: $e | JSON: $pedidoJson');
