@@ -401,14 +401,14 @@ class PedidoController {
       'totalPedido': pedido.totalPedido,
       'dataCriacao': _formatarData(pedido.dataCriacao),
       'ultimaAlteracao': _formatarData(pedido.ultimaAlteracao),
-      'itens': pedido.itens?.map((item) => {
+      'itens': pedido.itens.map((item) => {
         'id': item.id,
         'idPedido': item.idPedido,
         'idProduto': item.idProduto,
         'quantidade': item.quantidade,
         'totalItem': item.totalItem,
       }).toList(),
-      'pagamentos': pedido.pagamentos?.map((pagamento) => {
+      'pagamentos': pedido.pagamentos.map((pagamento) => {
         'id': pagamento.id,
         'idPedido': pagamento.idPedido,
         'valor': pagamento.valor,

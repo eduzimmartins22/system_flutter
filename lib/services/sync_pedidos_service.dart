@@ -24,28 +24,59 @@ class SyncPedidosService {
   Future<void> enviarPedidosAPI(String url, {Function(String)? onLog}) async {
     final pedidos = await _pedidoController.listarPedidosCompletos();
     if (pedidos.isEmpty) return;
-    
+
     onLog?.call('Sincronizando ${pedidos.length} pedidos...');
 
     for (final pedido in pedidos) {
       try {
         if (pedido.deletado == 1) continue;
 
-        final Map<String, dynamic> pedidoJson = _pedidoController.formatarParaServidor(pedido);
+        final Map<String, dynamic> pedidoJson = _pedidoController
+            .formatarParaServidor(pedido);
         final body = json.encode(pedidoJson);
 
-        final response = await http.post(
-          Uri.parse('$url/pedidos'),
-          body: body,
-          headers: {'Content-Type': 'application/json'},
-        );
+        http.Response response;
+        final bool isNovoPedido = pedido.ultimaAlteracao == null;
 
-        // Tratamento detalhado da resposta
+        if (isNovoPedido) {
+          response = await http.post(
+            Uri.parse('$url/pedidos'),
+            body: body,
+            headers: {'Content-Type': 'application/json'},
+          );
+        } 
+        else {
+          final pedidoServidor = await http.get(
+            Uri.parse('$url/pedidos/${pedido.id}'),
+          );
+          
+          if (pedidoServidor.statusCode == 200) {
+            final pedidoJsonServidor = json.decode(pedidoServidor.body);
+            
+            if (DateTime.parse(pedidoJsonServidor['ultimaAlteracao'],).isBefore(pedido.ultimaAlteracao!)) {
+              response = await http.post(
+                Uri.parse('$url/pedidos'),
+                body: body,
+                headers: {'Content-Type': 'application/json'},
+              );
+            } 
+            else {
+              if (pedido.ultimaAlteracao != null) {
+                await _pedidoController.deletarPedido(pedido.id);
+                onLog?.call('Pedido ${pedido.id} não existe mais no servidor, removido localmente.');
+              }
+            } 
+          }
+          continue;
+        }
+
         if (response.statusCode >= 200 && response.statusCode < 300) {
           if (response.body.isNotEmpty) {
             try {
               final decoded = json.decode(response.body);
-              await _pedidoController.upsertPedidoFromServer(Pedido.fromJson(decoded));
+              await _pedidoController.upsertPedidoFromServer(
+                Pedido.fromJson(decoded),
+              );
             } catch (e) {
               onLog?.call('Erro ao processar resposta: $e');
             }
@@ -70,12 +101,16 @@ class SyncPedidosService {
 
     for (final pedido in pedidosDeletados) {
       try {
-        final response = await http.delete(Uri.parse('$url/pedidos/${pedido.id}'));
-        
+        final response = await http.delete(
+          Uri.parse('$url/pedidos/${pedido.id}'),
+        );
+
         if (response.statusCode == 200) {
           await _pedidoController.deletarPedido(pedido.id);
         } else {
-          onLog?.call('Falha ao deletar pedido ${pedido.id} | Status: ${response.statusCode}');
+          onLog?.call(
+            'Falha ao deletar pedido ${pedido.id} | Status: ${response.statusCode}',
+          );
         }
       } catch (e) {
         onLog?.call('Erro crítico ao deletar pedido ${pedido.id}: $e');
@@ -101,15 +136,17 @@ class SyncPedidosService {
       }
 
       final List<dynamic> dados = responseBody['dados'];
-      if (dados.isEmpty) return;
       
-      final Set<String> apiPedidoIds = dados.map((pedido) => pedido['id'].toString()).toSet();
+      final Set<String> serverPedidoIds = dados.map((p) => p['id'].toString()).toSet();
       
-      final List<Pedido> pedidosLocais = await _pedidoController.listarPedidosCompletos();
-      
-      for (final pedidoLocal in pedidosLocais) {
-        if (pedidoLocal.ultimaAlteracao != null && !apiPedidoIds.contains(pedidoLocal.id)) {
+      final List<Pedido> pedidosLocaisSincronizados = (await _pedidoController.listarPedidosCompletos())
+        .where((pedido) => pedido.ultimaAlteracao != null)
+        .toList();
+
+      for (final pedidoLocal in pedidosLocaisSincronizados) {
+        if (!serverPedidoIds.contains(pedidoLocal.id)) {
           try {
+            onLog?.call('Pedido ${pedidoLocal.id} não encontrado no servidor - removendo localmente');
             await _pedidoController.deletarPedido(pedidoLocal.id);
           } catch (e) {
             onLog?.call('Erro ao excluir localmente pedido ${pedidoLocal.id}: $e');
@@ -122,13 +159,23 @@ class SyncPedidosService {
           final pedidoServidor = Pedido.fromJson(pedidoJson);
           final pedidoLocal = await _pedidoController.getPedidoById(pedidoServidor.id);
           
-          if (pedidoLocal != null && pedidoLocal.ultimaAlteracao != null) {
-            if (pedidoServidor.ultimaAlteracao == null || 
-                pedidoLocal.ultimaAlteracao!.isAfter(pedidoServidor.ultimaAlteracao!)) {
-              continue;
+          if (pedidoJson['deletado'] == true || pedidoJson['deletado'] == 1) {
+            if (pedidoLocal != null) {
+              onLog?.call('Pedido ${pedidoServidor.id} marcado como deletado no servidor - removendo localmente');
+              await _pedidoController.deletarPedido(pedidoLocal.id);
             }
+            continue;
           }
           
+          if (pedidoLocal != null && 
+              pedidoLocal.ultimaAlteracao != null &&
+              pedidoServidor.ultimaAlteracao != null &&
+              pedidoLocal.ultimaAlteracao!.isAfter(pedidoServidor.ultimaAlteracao!)) {
+            onLog?.call('Pedido ${pedidoLocal.id} tem alterações locais mais recentes - mantendo versão local');
+            continue;
+          }
+          
+          onLog?.call('Atualizando pedido ${pedidoServidor.id} com dados do servidor');
           await _pedidoController.upsertPedidoFromServer(pedidoServidor);
         } catch (e) {
           onLog?.call('Erro processando pedido ${pedidoJson['id']}: $e | JSON: $pedidoJson');
